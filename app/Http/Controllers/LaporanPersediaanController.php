@@ -16,17 +16,15 @@ class LaporanPersediaanController extends Controller
         $start = $request->start_date ?? now()->startOfMonth()->toDateString();
         $end = $request->end_date ?? now()->endOfMonth()->toDateString();
 
-        // Cek apakah sudah ada saldo_awal untuk bulan yang dipilih (awal bulan)
+        // Cek closing
         $closingExists = TransaksiPersediaan::where('jenis', 'saldo_awal')
             ->where('tanggal', $start)
             ->exists();
 
-        // Tanggal akhir bulan sebelumnya (untuk default nilai closing manual)
         $prevMonthEnd = Carbon::parse($start)->subMonth()->endOfMonth()->toDateString();
 
-        $produkList = Produk::with('kategori')->get()->map(function ($produk) use ($start, $end) {
-
-            // --- Saldo Awal (Ambil dari saldo_awal di awal bulan saja) ---
+        // Ambil semua produk
+        $allProduk = Produk::with('kategori')->get()->map(function ($produk) use ($start, $end) {
             $saldo_awal = TransaksiPersediaan::where('kode_produk', $produk->kode_produk)
                 ->where('jenis', 'saldo_awal')
                 ->where('tanggal', $start)
@@ -35,7 +33,6 @@ class LaporanPersediaanController extends Controller
             $produk->saldo_awal_qty = $saldo_awal->qty ?? 0;
             $produk->saldo_awal_harga = $saldo_awal->harga ?? 0;
 
-            // --- Penerimaan selama periode ---
             $penerimaan = TransaksiPersediaan::where('kode_produk', $produk->kode_produk)
                 ->where('jenis', 'penerimaan')
                 ->whereBetween('tanggal', [$start, $end]);
@@ -43,7 +40,6 @@ class LaporanPersediaanController extends Controller
             $produk->penerimaan_qty = $penerimaan->sum('qty');
             $produk->penerimaan_harga = $penerimaan->avg('harga') ?? 0;
 
-            // --- Pengeluaran selama periode ---
             $pengeluaran = TransaksiPersediaan::where('kode_produk', $produk->kode_produk)
                 ->where('jenis', 'pengeluaran')
                 ->whereBetween('tanggal', [$start, $end]);
@@ -51,10 +47,8 @@ class LaporanPersediaanController extends Controller
             $produk->pengeluaran_qty = $pengeluaran->sum('qty');
             $produk->pengeluaran_harga = $pengeluaran->avg('harga') ?? 0;
 
-            // --- Saldo Akhir (Qty dan Harga Rata-rata terbaru) ---
             $produk->saldo_akhir_qty = ($produk->saldo_awal_qty + $produk->penerimaan_qty) - $produk->pengeluaran_qty;
 
-            // Gunakan rata-rata dari saldo awal dan penerimaan (jika ada) untuk harga akhir
             $total_qty = $produk->saldo_awal_qty + $produk->penerimaan_qty;
             $total_nilai = ($produk->saldo_awal_qty * $produk->saldo_awal_harga) + ($produk->penerimaan_qty * $produk->penerimaan_harga);
             $produk->saldo_akhir_harga = $total_qty > 0 ? $total_nilai / $total_qty : 0;
@@ -62,8 +56,36 @@ class LaporanPersediaanController extends Controller
             return $produk;
         });
 
+        // Hitung total semua data (bukan hanya per halaman)
+        $total = [
+            'saldo_awal_qty' => $allProduk->sum('saldo_awal_qty'),
+            'saldo_awal_total' => $allProduk->sum(fn($p) => $p->saldo_awal_qty * $p->saldo_awal_harga),
+
+            'penerimaan_qty' => $allProduk->sum('penerimaan_qty'),
+            'penerimaan_total' => $allProduk->sum(fn($p) => $p->penerimaan_qty * $p->penerimaan_harga),
+
+            'pengeluaran_qty' => $allProduk->sum('pengeluaran_qty'),
+            'pengeluaran_total' => $allProduk->sum(fn($p) => $p->pengeluaran_qty * $p->pengeluaran_harga),
+
+            'saldo_akhir_qty' => $allProduk->sum('saldo_akhir_qty'),
+            'saldo_akhir_total' => $allProduk->sum(fn($p) => $p->saldo_akhir_qty * $p->saldo_akhir_harga),
+        ];
+
+        // Pagination manual
+        $page = $request->get('page', 1);
+        $perPage = 15;
+        $paginatedProduk = $allProduk->forPage($page, $perPage);
+        $produkList = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedProduk,
+            $allProduk->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         return view('laporan.persediaan', compact(
             'produkList',
+            'total',
             'closingExists',
             'prevMonthEnd'
         ));

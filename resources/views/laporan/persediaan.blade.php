@@ -18,6 +18,7 @@
                     </button>
                 </div>
             @endif
+
             <form action="{{ route('laporan-persediaan.index') }}" method="GET" class="form-inline mb-3">
                 <div class="form-group mr-2">
                     <label for="start" class="mr-1">Dari</label>
@@ -101,33 +102,61 @@
                                     <td class="text-right">{{ $p->saldo_awal_qty }}</td>
                                     <td class="text-right">{{ number_format($p->saldo_awal_harga, 0) }}</td>
                                     <td class="text-right">
-                                        {{ number_format($p->saldo_awal_qty * $p->saldo_awal_harga, 0) }}</td>
+                                        {{ number_format($p->saldo_awal_qty * $p->saldo_awal_harga, 0) }}
+                                    </td>
 
                                     {{-- Penerimaan --}}
                                     <td class="text-right">{{ $p->penerimaan_qty }}</td>
                                     <td class="text-right">{{ number_format($p->penerimaan_harga, 0) }}</td>
                                     <td class="text-right">
-                                        {{ number_format($p->penerimaan_qty * $p->penerimaan_harga, 0) }}</td>
+                                        {{ number_format($p->penerimaan_qty * $p->penerimaan_harga, 0) }}
+                                    </td>
 
                                     {{-- Pengeluaran --}}
                                     <td class="text-right">{{ $p->pengeluaran_qty }}</td>
                                     <td class="text-right">{{ number_format($p->pengeluaran_harga, 0) }}</td>
                                     <td class="text-right">
-                                        {{ number_format($p->pengeluaran_qty * $p->pengeluaran_harga, 0) }}</td>
+                                        {{ number_format($p->pengeluaran_qty * $p->pengeluaran_harga, 0) }}
+                                    </td>
 
                                     {{-- Saldo Akhir --}}
                                     <td class="text-right">{{ $p->saldo_akhir_qty }}</td>
                                     <td class="text-right">{{ number_format($p->saldo_akhir_harga, 0) }}</td>
                                     <td class="text-right">
-                                        {{ number_format($p->saldo_akhir_qty * $p->saldo_akhir_harga, 0) }}</td>
+                                        {{ number_format($p->saldo_akhir_qty * $p->saldo_akhir_harga, 0) }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
                                     <td colspan="17" class="text-center text-muted">Data tidak tersedia.</td>
                                 </tr>
                             @endforelse
+
+                            {{-- Total row --}}
+                            <tr class="table-primary font-weight-bold text-right">
+                                <td colspan="4" class="text-center">Total</td>
+
+                                <td>{{ number_format($total['saldo_awal_qty'], 0) }}</td>
+                                <td>-</td>
+                                <td>{{ number_format($total['saldo_awal_total'], 0) }}</td>
+
+                                <td>{{ number_format($total['penerimaan_qty'], 0) }}</td>
+                                <td>-</td>
+                                <td>{{ number_format($total['penerimaan_total'], 0) }}</td>
+
+                                <td>{{ number_format($total['pengeluaran_qty'], 0) }}</td>
+                                <td>-</td>
+                                <td>{{ number_format($total['pengeluaran_total'], 0) }}</td>
+
+                                <td>{{ number_format($total['saldo_akhir_qty'], 0) }}</td>
+                                <td>-</td>
+                                <td>{{ number_format($total['saldo_akhir_total'], 0) }}</td>
+                            </tr>
                         </tbody>
                     </table>
+                    <div class="card-footer clearfix d-flex justify-content-end">
+                        {{ $produkList->appends(request()->query())->links('vendor.pagination.bootstrap-4') }}
+                    </div>
                 </div>
             </div>
         @else
