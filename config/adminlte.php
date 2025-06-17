@@ -332,7 +332,15 @@ return [
                 ['text' => 'Pengiriman Penjualan', 'url' => 'pengiriman-penjualan', 'icon' => 'far fa-circle'],
             ],
         ],
-
+        // PIUTANG
+        [
+            'text' => 'Piutang Customer',
+            'icon' => 'fas fa-hand-holding-usd',
+            'submenu' => [
+                ['text' => 'Daftar Piutang', 'url' => 'piutang', 'icon' => 'far fa-circle'],
+                ['text' => 'Penerimaan Pembayaran', 'url' => 'pembayaran-penjualan', 'icon' => 'far fa-circle'],
+            ],
+        ],
         // PEMBELIAN
         [
             'text' => 'Pembelian',
@@ -342,16 +350,6 @@ return [
                 ['text' => 'Penerimaan Barang', 'url' => 'penerimaan', 'icon' => 'far fa-circle'],
                 ['text' => 'Faktur Pembelian', 'url' => 'pembelian-invoice', 'icon' => 'far fa-circle'],
                 ['text' => 'Retur Pembelian', 'url' => 'retur-pembelian', 'icon' => 'far fa-circle'],
-            ],
-        ],
-
-        // PIUTANG
-        [
-            'text' => 'Piutang Customer',
-            'icon' => 'fas fa-hand-holding-usd',
-            'submenu' => [
-                ['text' => 'Daftar Piutang', 'url' => 'piutang', 'icon' => 'far fa-circle'],
-                ['text' => 'Penerimaan Pembayaran', 'url' => 'pembayaran-penjualan', 'icon' => 'far fa-circle'],
             ],
         ],
 
@@ -366,27 +364,7 @@ return [
             ],
         ],
 
-        // KAS & BANK
-        [
-            'text' => 'Kas & Bank',
-            'icon' => 'fas fa-wallet',
-            'submenu' => [
-                ['text' => 'Arus Kas', 'url' => 'kas/arus-kas', 'icon' => 'far fa-circle'],
-                ['text' => 'Mutasi Kas', 'url' => 'kas/mutasi', 'icon' => 'far fa-circle'],
-                ['text' => 'Rekonsiliasi Bank', 'url' => 'kas/rekonsiliasi', 'icon' => 'far fa-circle'],
-            ],
-        ],
-
-        // PAJAK
-        [
-            'text' => 'Pajak',
-            'icon' => 'fas fa-file-invoice-dollar',
-            'submenu' => [
-                ['text' => 'PPN Keluaran', 'url' => 'ppn-keluaran', 'icon' => 'far fa-circle'],
-                ['text' => 'PPN Masukan', 'url' => 'faktur-pajak-masukan', 'icon' => 'far fa-circle'],
-            ],
-        ],
-
+        ['header' => 'AKUNTANSI & KEUANGAN'],
         // AKUNTANSI
         [
             'text' => 'Akuntansi',
@@ -399,7 +377,35 @@ return [
                 ['text' => 'Neraca Lajur', 'url' => 'akuntansi/neraca-lajur', 'icon' => 'far fa-circle'],
             ],
         ],
-
+        // PAJAK
+        [
+            'text' => 'Pajak',
+            'icon' => 'fas fa-file-invoice-dollar',
+            'submenu' => [
+                ['text' => 'PPN Keluaran', 'url' => 'ppn-keluaran', 'icon' => 'far fa-circle'],
+                ['text' => 'PPN Masukan', 'url' => 'faktur-pajak-masukan', 'icon' => 'far fa-circle'],
+            ],
+        ],
+        [
+            'text' => 'Kas & Bank',
+            'icon' => 'fas fa-wallet',
+            'submenu' => [
+                ['text' => 'Arus Kas', 'url' => 'kas/arus-kas', 'icon' => 'far fa-circle'],
+                ['text' => 'Mutasi Kas', 'url' => 'kas/mutasi', 'icon' => 'far fa-circle'],
+                ['text' => 'Rekonsiliasi Bank', 'url' => 'kas/rekonsiliasi', 'icon' => 'far fa-circle'],
+            ],
+        ],
+        [
+            'text' => 'Laporan Keuangan',
+            'icon' => 'fas fa-file-alt',
+            'submenu' => [
+                ['text' => 'Laba Rugi', 'url' => 'laporan/laba-rugi', 'icon' => 'far fa-circle'],
+                ['text' => 'Neraca', 'url' => 'laporan/neraca', 'icon' => 'far fa-circle'],
+                ['text' => 'Arus Kas', 'url' => 'laporan/arus-kas', 'icon' => 'far fa-circle'],
+                ['text' => 'Perubahan Modal', 'url' => 'laporan/perubahan-modal', 'icon' => 'far fa-circle'],
+            ],
+        ],
+        ['header' => 'PERSEDIAAN'],
         // PERSEDIAAN
         [
             'text' => 'Persediaan',
@@ -417,7 +423,7 @@ return [
             ],
 
         ],
-        // PENGGAJIAN
+        ['header' => 'SDM & PENGGAJIAN'],
         [
             'text' => 'Penggajian',
             'icon' => 'fas fa-money-bill-wave',
@@ -428,7 +434,7 @@ return [
             ],
         ],
 
-        // ASET TETAP
+        ['header' => 'MANAJEMEN ASET TETAP'],
         [
             'text' => 'Aset Tetap',
             'icon' => 'fas fa-warehouse',
@@ -438,17 +444,6 @@ return [
             ],
         ],
 
-        // LAPORAN
-        [
-            'text' => 'Laporan',
-            'icon' => 'fas fa-file-alt',
-            'submenu' => [
-                ['text' => 'Laba Rugi', 'url' => 'laporan/laba-rugi', 'icon' => 'far fa-circle'],
-                ['text' => 'Neraca', 'url' => 'laporan/neraca', 'icon' => 'far fa-circle'],
-                ['text' => 'Arus Kas', 'url' => 'laporan/arus-kas', 'icon' => 'far fa-circle'],
-                ['text' => 'Perubahan Modal', 'url' => 'laporan/perubahan-modal', 'icon' => 'far fa-circle'],
-            ],
-        ],
 
         // PENGATURAN
         [
