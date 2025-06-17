@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KartuStok;
 use App\Models\SalesOrder;
-use App\Models\TransaksiPersediaan;
-use App\Models\PengirimanPenjualan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\PengirimanPenjualan;
+use App\Models\TransaksiPersediaan;
 
 class PengirimanPenjualanController extends Controller
 {
@@ -75,7 +76,18 @@ class PengirimanPenjualanController extends Controller
                     'harga' => $hargaFIFO,
                     'qty_sisa' => 0,
                 ]);
+
+                // Catat ke kartu stok
+                KartuStok::create([
+                    'tanggal' => $request->tanggal,
+                    'no_transaksi' => $nomorSuratJalan,
+                    'id_produk' => $produk->id,
+                    'jenis' => 'keluar',
+                    'sumber_tujuan' => $salesOrder->customer->nama ?? 'Customer',
+                    'qty' => $detail->qty,
+                ]);
             }
+
 
             DB::commit();
             return redirect()->route('pengiriman-penjualan.index')
@@ -119,13 +131,22 @@ class PengirimanPenjualanController extends Controller
             foreach ($pengiriman->salesOrder->salesOrderDetail as $detail) {
                 $produk = $detail->produk;
 
+                // Kembalikan stok
                 $produk->stok += $detail->qty;
                 $produk->save();
 
+                // Hapus dari transaksi persediaan
                 TransaksiPersediaan::where('kode_produk', $produk->kode_produk)
                     ->where('id_ref', $pengiriman->id)
                     ->where('jenis', 'pengeluaran')
                     ->where('sumber', 'like', '%SO#' . $pengiriman->salesOrder->nomor_so . '%')
+                    ->delete();
+
+                // Hapus dari kartu stok
+                KartuStok::where('id_produk', $produk->id)
+                    ->where('no_transaksi', $pengiriman->nomor_surat_jalan)
+                    ->where('jenis', 'keluar')
+                    ->where('sumber_tujuan', $pengiriman->salesOrder->customer->nama ?? 'Customer')
                     ->delete();
             }
 

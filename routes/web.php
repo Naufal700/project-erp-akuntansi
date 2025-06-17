@@ -16,6 +16,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BukuBesarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\KartuStokController;
 use App\Http\Controllers\KontrabonController;
 use App\Http\Controllers\PembelianController;
 use App\Http\Controllers\PenjualanController;
@@ -352,6 +353,8 @@ Route::get('laporan-persediaan/export', [LaporanPersediaanController::class, 'ex
 Route::post('laporan-persediaan/closing', [LaporanPersediaanController::class, 'closing'])->name('laporan-persediaan.closing');
 Route::post('/laporan-persediaan/closing-manual', [LaporanPersediaanController::class, 'closingByDate'])->name('laporan-persediaan.closing.manual');
 
+Route::get('/kartu-stok', [KartuStokController::class, 'index'])->name('kartu-stok.index');
+Route::get('/kartu-stok/export-excel', [KartuStokController::class, 'exportExcel'])->name('kartu-stok.export.excel');
 
 
 

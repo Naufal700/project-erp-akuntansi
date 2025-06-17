@@ -407,12 +407,12 @@ return [
             'submenu' => [
                 ['text' => 'Daftar Barang', 'url' => 'produk', 'icon' => 'far fa-circle'],
                 ['text' => 'Kategori Barang', 'url' => 'kategori-produk', 'icon' => 'far fa-circle'],
-                ['text' => 'Stok Awal', 'url' => 'persediaan/stok-awal', 'icon' => 'far fa-circle'], // ❗ wajib untuk pembukaan awal
-                ['text' => 'Penerimaan Barang', 'url' => 'penerimaan-barang', 'icon' => 'far fa-circle'],
-                ['text' => 'Pengeluaran Barang', 'url' => 'pengeluaran-barang', 'icon' => 'far fa-circle'],
-                ['text' => 'Mutasi Antar Gudang', 'url' => 'persediaan/mutasi-gudang', 'icon' => 'far fa-circle'], // jika multi-gudang
-                ['text' => 'Penyesuaian Stok', 'url' => 'persediaan/penyesuaian-stok', 'icon' => 'far fa-circle'], // untuk koreksi manual
-                ['text' => 'Kartu Stok', 'url' => 'persediaan/kartu-stok', 'icon' => 'far fa-circle'],
+                // ['text' => 'Stok Awal', 'url' => 'persediaan/stok-awal', 'icon' => 'far fa-circle'], // ❗ wajib untuk pembukaan awal
+                // ['text' => 'Penerimaan Barang', 'url' => 'penerimaan-barang', 'icon' => 'far fa-circle'],
+                // ['text' => 'Pengeluaran Barang', 'url' => 'pengeluaran-barang', 'icon' => 'far fa-circle'],
+                // ['text' => 'Mutasi Antar Gudang', 'url' => 'persediaan/mutasi-gudang', 'icon' => 'far fa-circle'], // jika multi-gudang
+                // ['text' => 'Penyesuaian Stok', 'url' => 'persediaan/penyesuaian-stok', 'icon' => 'far fa-circle'], // untuk koreksi manual
+                ['text' => 'Kartu Stok', 'url' => 'kartu-stok', 'icon' => 'far fa-circle'],
                 ['text' => 'Laporan Persediaan', 'url' => 'laporan-persediaan', 'icon' => 'far fa-circle'], // laporan saldo & mutasi
             ],
 

@@ -3,7 +3,7 @@
 @section('title', 'Laporan Persediaan')
 
 @section('content_header')
-    <h1>Laporan Persediaan (FIFO)</h1>
+    <h1 class="text-bold">Laporan Persediaan (FIFO)</h1>
 @stop
 
 @section('content')

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Produk;
+use App\Models\KartuStok;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\PurchaseOrder;
@@ -102,6 +103,16 @@ class PenerimaanPembelianController extends Controller
                     'harga' => $harga,
                     'qty_sisa' => $qty_diterima,
                 ]);
+
+                // Simpan ke kartu stok
+                KartuStok::create([
+                    'tanggal' => $request->tanggal,
+                    'no_transaksi' => $nomor,
+                    'id_produk' => $id_produk,
+                    'jenis' => 'masuk',
+                    'sumber_tujuan' => $penerimaan->purchaseOrder->supplier->nama ?? 'Supplier',
+                    'qty' => $qty_diterima,
+                ]);
             }
 
             // Update status PO jadi diterima
@@ -142,11 +153,18 @@ class PenerimaanPembelianController extends Controller
                     $produk->stok -= $detail->qty_diterima;
                     $produk->save();
 
-                    // Hapus transaksi masuk dari laporan persediaan
+                    // Hapus transaksi masuk dari persediaan
                     TransaksiPersediaan::where('kode_produk', $produk->kode_produk)
                         ->where('tanggal', $penerimaan->tanggal)
                         ->where('jenis', 'penerimaan')
                         ->where('id_ref', $penerimaan->id)
+                        ->delete();
+
+                    // Hapus dari kartu stok
+                    KartuStok::where('id_produk', $produk->id)
+                        ->where('no_transaksi', $penerimaan->nomor_penerimaan)
+                        ->where('jenis', 'masuk')
+                        ->where('sumber_tujuan', $penerimaan->purchaseOrder->supplier->nama ?? 'Supplier')
                         ->delete();
                 }
             }

@@ -55,4 +55,8 @@ class Produk extends Model
     {
         return $this->hasMany(TransaksiPersediaan::class, 'kode_produk', 'kode_produk');
     }
+    public function kartuStok()
+    {
+        return $this->hasMany(KartuStok::class, 'id_produk');
+    }
 }
