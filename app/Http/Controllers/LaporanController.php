@@ -211,6 +211,12 @@ class LaporanController extends Controller
             ->pluck('kode_akun')
             ->toArray();
 
+        $saldoAwal = DB::table('jurnal_umum')
+            ->whereIn('kode_akun', $akunKas)
+            ->where('tanggal', '<', $tanggal_awal)
+            ->selectRaw('SUM(nominal_debit) - SUM(nominal_kredit) as saldo')
+            ->value('saldo') ?? 0;
+
         // Ambil jurnal yang terkait Kas & Bank
         $jurnalKas = DB::table('jurnal_umum')
             ->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir])
@@ -272,13 +278,25 @@ class LaporanController extends Controller
                 'keluar' => collect($data)->where('jenis', 'keluar')->sum('jumlah'),
             ];
         }
+        foreach ($arusKas as $kelompok => $data) {
+            $grouped = collect($data)->groupBy('keterangan')->map(function ($items) {
+                $total = $items->sum('jumlah');
+                return [
+                    'keterangan' => $items[0]['keterangan'],
+                    'jumlah' => $total,
+                ];
+            })->values()->toArray();
+
+            $arusKas[$kelompok] = $grouped;
+        }
 
         return view('laporan.arus_kas', compact(
             'arusKas',
             'tanggal_awal',
             'tanggal_akhir',
             'totalArusKas',
-            'kelompokUrutan'
+            'kelompokUrutan',
+            'saldoAwal'
         ));
     }
 

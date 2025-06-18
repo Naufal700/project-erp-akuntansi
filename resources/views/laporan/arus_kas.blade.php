@@ -3,7 +3,7 @@
 @section('title', 'Laporan Arus Kas')
 
 @section('content_header')
-    <h1 class="text-dark">
+    <h1 class="text-dark fw-bold">
         <i class="fas fa-file-invoice-dollar mr-1"></i> Laporan Arus Kas (Metode Langsung)
     </h1>
 @stop
@@ -33,72 +33,71 @@
                     'investasi' => 'Aktivitas Investasi',
                     'pendanaan' => 'Aktivitas Pendanaan',
                 ];
-
-                function tampilkanKelompok($data)
-                {
-                    $html = '';
-                    foreach ($data as $item) {
-                        $html .=
-                            '<tr>
-                    <td>' .
-                            date('d-m-Y', strtotime($item['tanggal'])) .
-                            '</td>
-                    <td>' .
-                            e($item['keterangan']) .
-                            '</td>
-                    <td class="text-end">' .
-                            ($item['jenis'] === 'masuk' ? formatCurrency($item['jumlah']) : '-') .
-                            '</td>
-                    <td class="text-end">' .
-                            ($item['jenis'] === 'keluar' ? formatCurrency($item['jumlah']) : '-') .
-                            '</td>
-                </tr>';
-                    }
-                    return $html;
-                }
-
                 $totalMasuk = 0;
                 $totalKeluar = 0;
             @endphp
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover table-bordered align-middle">
-                        <thead class="table-dark text-center">
-                            @foreach ($kelompokLabels as $key => $label)
-                                @php
-                                    $masuk = $totalArusKas[$key]['masuk'] ?? 0;
-                                    $keluar = $totalArusKas[$key]['keluar'] ?? 0;
-                                    $totalMasuk += $masuk;
-                                    $totalKeluar += $keluar;
-                                @endphp
 
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th colspan="4" class="fw-semibold">{{ $label }}</th>
-                                    </tr>
-                                    <tr class="bg-white">
-                                        <th style="width: 15%;">Tanggal</th>
-                                        <th>Keterangan</th>
-                                        <th class="text-end" style="width: 15%;">Kas Masuk</th>
-                                        <th class="text-end" style="width: 15%;">Kas Keluar</th>
-                                    </tr>
-                                </thead>
-                        <tbody>
-                            {!! tampilkanKelompok($arusKas[$key] ?? []) !!}
-                            <tr class="fw-bold bg-light">
-                                <td colspan="2">Total {{ $label }}</td>
-                                <td class="text-end">{{ formatCurrency($masuk) }}</td>
-                                <td class="text-end">{{ formatCurrency($keluar) }}</td>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>Uraian</th>
+                            <th class="text-end" style="width: 25%;">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($kelompokLabels as $key => $label)
+                            @php
+                                $dataKelompok = $arusKas[$key] ?? [];
+                                $masuk = $totalArusKas[$key]['masuk'] ?? 0;
+                                $keluar = $totalArusKas[$key]['keluar'] ?? 0;
+                                $totalMasuk += $masuk;
+                                $totalKeluar += $keluar;
+                            @endphp
+
+                            {{-- Judul Kelompok --}}
+                            <tr class="fw-semibold bg-light">
+                                <td colspan="2">{{ $label }}</td>
                             </tr>
-                        </tbody>
+
+                            {{-- Detail --}}
+                            @foreach ($dataKelompok as $item)
+                                <tr>
+                                    <td>{{ $item['keterangan'] }}</td>
+                                    <td class="text-end text">{{ formatCurrency($item['jumlah']) }}</td>
+                                </tr>
+                            @endforeach
+
+
+                            {{-- Arus kas bersih dari kegiatan --}}
+                            <tr class="fw-bold">
+                                <td class="text-end text-bold">Arus kas bersih dari kegiatan {{ $label }}</td>
+                                <td class="text-end text-bold">
+                                    {{ formatCurrency($masuk - $keluar) }}
+                                </td>
+                            </tr>
                         @endforeach
+                    </tbody>
 
-                        <tfoot class="bg-secondary text-white fw-bold">
-                            <tr>
-                                <td colspan="2">Total Kenaikan / Penurunan Kas</td>
-                                <td colspan="2" class="text-end">{{ formatCurrency($totalMasuk - $totalKeluar) }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            @stop
+                    {{-- Ringkasan --}}
+                    <tfoot class="fw-bold">
+                        <tr class="bg-light">
+                            <td class="text-end text-bold">Kenaikan / Penurunan Kas</td>
+                            <td class="text-end text-bold">{{ formatCurrency($totalMasuk - $totalKeluar) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-bold">Saldo Awal Kas</td>
+                            <td class="text-end text-bold">{{ formatCurrency($saldoAwal) }}</td>
+                        </tr>
+                        <tr class="bg-light">
+                            <td class="text-end text-bold">Saldo Akhir Kas</td>
+                            <td class="text-end text-bold">
+                                {{ formatCurrency($saldoAwal + $totalMasuk - $totalKeluar) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+@stop
