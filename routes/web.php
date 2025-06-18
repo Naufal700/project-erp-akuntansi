@@ -71,19 +71,7 @@ Route::middleware('auth')->group(function () {
 
 
     // Inventory Movement
-    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
-
-    // Payroll
-    Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
-
-    // Fixed Asset
-    Route::get('fixed-asset', [FixedAssetController::class, 'index'])->name('fixedasset.index');
-
-    // Multi-Cabang
-    Route::get('multi-cabang', [MultiCabangController::class, 'index'])->name('multicabang.index');
-
-    // Multi-Currency
-    Route::get('multi-currency', [MultiCurrencyController::class, 'index'])->name('multicurrency.index');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 Route::prefix('customer')->name('customer.')->group(function () {
     Route::get('/', [CustomerController::class, 'index'])->name('index');
