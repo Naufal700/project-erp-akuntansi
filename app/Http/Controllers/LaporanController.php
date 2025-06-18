@@ -124,6 +124,13 @@ class LaporanController extends Controller
             'laba_ditahan' => $laba_ditahan,
             'laba_berjalan' => $laba_berjalan,
         ];
+        // Filter akun yang punya saldo ≠ 0
+        $data['aset_lancar'] = array_filter($data['aset_lancar'], fn($a) => $a['saldo'] != 0);
+        $data['aset_tetap'] = array_filter($data['aset_tetap'], fn($a) => $a['saldo'] != 0);
+        $data['kewajiban_jp'] = array_filter($data['kewajiban_jp'], fn($a) => $a['saldo'] != 0);
+        $data['kewajiban_pj'] = array_filter($data['kewajiban_pj'], fn($a) => $a['saldo'] != 0);
+        $data['modal'] = array_filter($data['modal'], fn($a) => $a['saldo'] != 0);
+
         $total_aset_lancar = collect($data['aset_lancar'])->sum('saldo');
         $total_aset_tetap = collect($data['aset_tetap'])->sum('saldo');
         $total_aset = $total_aset_lancar + $total_aset_tetap;
@@ -135,6 +142,11 @@ class LaporanController extends Controller
         $total_modal = collect($data['modal'])->sum('saldo') + $data['laba_ditahan'] + $data['laba_berjalan'];
         $total_pasiva = $total_kewajiban + $total_modal;
         $data['total_aset'] = $total_aset;
+        $data['sub_aset_lancar'] = $total_aset_lancar;
+        $data['sub_aset_tetap'] = $total_aset_tetap;
+        $data['sub_kewajiban_jp'] = $total_kewajiban_jp;
+        $data['sub_kewajiban_pj'] = $total_kewajiban_pj;
+        $data['sub_ekuitas'] = $total_modal;
         $data['total_kewajiban'] = $total_kewajiban;
         $data['total_modal'] = $total_modal;
         $data['total_passiva'] = $total_pasiva;
@@ -193,11 +205,13 @@ class LaporanController extends Controller
         $tanggal_awal = $request->input('tanggal_awal') ?? now()->startOfMonth()->toDateString();
         $tanggal_akhir = $request->input('tanggal_akhir') ?? now()->toDateString();
 
+        // Ambil daftar kode akun Kas & Bank
         $akunKas = DB::table('coa')
-            ->whereIn('tipe_akun', ['Kas', 'Bank'])
+            ->whereIn(DB::raw('LOWER(tipe_akun)'), ['kas', 'bank'])
             ->pluck('kode_akun')
             ->toArray();
 
+        // Ambil jurnal yang terkait Kas & Bank
         $jurnalKas = DB::table('jurnal_umum')
             ->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir])
             ->whereIn('kode_akun', $akunKas)
@@ -208,57 +222,64 @@ class LaporanController extends Controller
             ->orderBy('tanggal')
             ->get();
 
-        $mapping = DB::table('mapping_jurnal')
-            ->get()
-            ->keyBy(fn($m) => strtolower(trim($m->modul ?? '') . '|' . trim($m->event ?? '')));
+        // Ambil mapping jurnal berbasis akun lawan
+        $mapping = DB::table('mapping_jurnal')->get();
 
-        $arusKas = [
-            'operasi' => [],
-            'investasi' => [],
-            'pendanaan' => [],
-        ];
+        // Ambil semua kelompok arus kas yang ada di mapping
+        $kelompokUrutan = $mapping->pluck('arus_kas_kelompok')->filter()->unique()->values()->toArray();
+
+        // Inisialisasi struktur kelompok
+        $arusKas = [];
+        foreach ($kelompokUrutan as $kelompok) {
+            $arusKas[$kelompok] = [];
+        }
+        $arusKas['operasi'] ??= []; // fallback jika tidak termapping
 
         foreach ($jurnalKas as $row) {
-            $modul = strtolower(trim($row->modul ?? ''));
-            $event = strtolower(trim($row->event ?? ''));
-            $key = $modul . '|' . $event;
-
-            $kelompok = 'operasi';
+            $kode_akun = $row->kode_akun;
+            $nominal = $row->nominal_debit > 0 ? $row->nominal_debit : $row->nominal_kredit;
             $jenis = $row->nominal_debit > 0 ? 'masuk' : 'keluar';
-            $jumlah = abs($row->nominal_debit - $row->nominal_kredit);
-            $keterangan = $row->keterangan;
 
-            if ($mapping->has($key)) {
-                $map = $mapping[$key];
-                $kelompok = $map->arus_kas_kelompok ?? 'operasi';
-                $jenis = $map->arus_kas_jenis ?? $jenis;
-                $keterangan = $map->arus_kas_keterangan ?? $row->keterangan;
+            // Temukan mapping berdasarkan akun lawan (akun bukan kas)
+            $map = $mapping->first(function ($m) use ($kode_akun, $jenis) {
+                if ($jenis == 'masuk') {
+                    return trim($m->kode_akun_debit) === trim($kode_akun);
+                } else {
+                    return trim($m->kode_akun_kredit) === trim($kode_akun);
+                }
+            });
+
+            $kelompok = $map->arus_kas_kelompok ?? 'operasi';
+            $keterangan = $map->arus_kas_keterangan ?? $row->keterangan ?? '-';
+
+            if (!isset($arusKas[$kelompok])) {
+                $arusKas[$kelompok] = [];
             }
 
             $arusKas[$kelompok][] = [
                 'tanggal' => $row->tanggal,
                 'keterangan' => $keterangan,
-                'jumlah' => $jumlah,
+                'jumlah' => $nominal,
                 'jenis' => $jenis,
             ];
         }
 
-        $totalArusKas = [
-            'operasi' => [
-                'masuk' => collect($arusKas['operasi'])->where('jenis', 'masuk')->sum('jumlah'),
-                'keluar' => collect($arusKas['operasi'])->where('jenis', 'keluar')->sum('jumlah'),
-            ],
-            'investasi' => [
-                'masuk' => collect($arusKas['investasi'])->where('jenis', 'masuk')->sum('jumlah'),
-                'keluar' => collect($arusKas['investasi'])->where('jenis', 'keluar')->sum('jumlah'),
-            ],
-            'pendanaan' => [
-                'masuk' => collect($arusKas['pendanaan'])->where('jenis', 'masuk')->sum('jumlah'),
-                'keluar' => collect($arusKas['pendanaan'])->where('jenis', 'keluar')->sum('jumlah'),
-            ],
-        ];
+        // Hitung total per kelompok
+        $totalArusKas = [];
+        foreach ($arusKas as $kelompok => $data) {
+            $totalArusKas[$kelompok] = [
+                'masuk' => collect($data)->where('jenis', 'masuk')->sum('jumlah'),
+                'keluar' => collect($data)->where('jenis', 'keluar')->sum('jumlah'),
+            ];
+        }
 
-        return view('laporan.arus_kas', compact('arusKas', 'tanggal_awal', 'tanggal_akhir', 'totalArusKas'));
+        return view('laporan.arus_kas', compact(
+            'arusKas',
+            'tanggal_awal',
+            'tanggal_akhir',
+            'totalArusKas',
+            'kelompokUrutan'
+        ));
     }
 
     public function perubahanModal(Request $request)
