@@ -11,7 +11,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Total Penjualan = jumlah total semua nilai dari sales order
+        // Total Penjualan
         $totalPenjualan = SalesOrder::sum('total');
 
         // Total Purchase Order
@@ -43,11 +43,44 @@ class DashboardController extends Controller
                 return $item->total - $item->total_bayar;
             });
 
-        return view('dashboard', [
-            'totalPenjualan'     => $totalPenjualan,
-            'totalPO'            => $totalPO,
-            'totalPiutang'       => $totalPiutang,
-            'totalHutang'        => $totalHutang,
-        ]);
+        // Kartu ringkasan
+        $cards = [
+            [
+                'title' => 'Total Penjualan',
+                'value' => $totalPenjualan,
+                'color' => 'primary',
+                'icon' => 'shopping-cart',
+                'url' => 'sales_order',
+            ],
+            [
+                'title' => 'Purchase Order',
+                'value' => $totalPO,
+                'color' => 'success',
+                'icon' => 'file-invoice-dollar',
+                'url' => 'purchase-order',
+            ],
+            [
+                'title' => 'Piutang',
+                'value' => $totalPiutang,
+                'color' => 'warning',
+                'icon' => 'hand-holding-usd',
+                'url' => 'piutang',
+            ],
+            [
+                'title' => 'Hutang',
+                'value' => $totalHutang,
+                'color' => 'danger',
+                'icon' => 'credit-card',
+                'url' => 'hutang-supplier',
+            ],
+        ];
+
+        return view('dashboard', compact(
+            'totalPenjualan',
+            'totalPO',
+            'totalPiutang',
+            'totalHutang',
+            'cards',
+        ));
     }
 }
