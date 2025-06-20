@@ -31,13 +31,28 @@
 @endsection
 
 @section('content')
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <a href="{{ route('jurnal_umum.create') }}" class="btn btn-primary btn-sm" title="Buat Jurnal Manual">
                 <i class="fas fa-plus"></i> Buat Jurnal Manual
             </a>
+            <form id="formDeleteSelected" method="POST" action="{{ route('jurnal_umum.deleteSelected') }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger btn-sm"
+                    onclick="return confirm('Yakin ingin menghapus jurnal yang dipilih?')">
+                    <i class="fas fa-trash-alt"></i> Hapus Terpilih
+                </button>
+            </form>
         </div>
-
         <div class="card-body">
             <form method="GET" action="{{ route('jurnal_umum.index') }}" class="row g-3 align-items-end mb-4">
                 <div class="col-md-3">
@@ -65,12 +80,14 @@
                 <table class="table table-striped table-hover text-nowrap align-middle">
                     <thead class="thead-dark sticky-top">
                         <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="checkAll">
+                            </th>
                             <th style="width:110px;">Tanggal</th>
                             <th style="width:120px;">Kode Akun</th>
                             <th>Nama Akun</th>
                             <th>Keterangan</th>
                             <th style="width:120px;">Referensi</th>
-                            {{-- <th style="width:110px;">Modul</th> --}}
                             <th class="text-end" style="width:140px;">Debit (Rp)</th>
                             <th class="text-end" style="width:140px;">Kredit (Rp)</th>
                             <th style="width:110px;">Aksi</th>
@@ -88,12 +105,15 @@
                                 $totalKredit += $jurnal->nominal_kredit;
                             @endphp
                             <tr>
+                                <td>
+                                    <input type="checkbox" name="ids[]" form="formDeleteSelected"
+                                        value="{{ $jurnal->id }}">
+                                </td>
                                 <td>{{ tanggal_indonesia($jurnal->tanggal) }}</td>
                                 <td>{{ $jurnal->kode_akun }}</td>
                                 <td>{{ $jurnal->coa->nama_akun ?? '-' }}</td>
                                 <td>{{ $jurnal->keterangan ?? '-' }}</td>
                                 <td>{{ $jurnal->ref ?? '-' }}</td>
-                                {{-- <td>{{ ucfirst($jurnal->modul) ?? '-' }}</td> --}}
                                 <td class="text-end">{{ number_format($jurnal->nominal_debit, 2, ',', '.') }}</td>
                                 <td class="text-end">{{ number_format($jurnal->nominal_kredit, 2, ',', '.') }}</td>
                                 <td>
@@ -101,7 +121,6 @@
                                         title="Edit Jurnal">
                                         <i class="fas fa-edit"></i>
                                     </a>
-
                                     <form action="{{ route('jurnal_umum.destroy', $jurnal->id) }}" method="POST"
                                         class="d-inline" onsubmit="return confirm('Yakin ingin menghapus jurnal ini?')">
                                         @csrf
@@ -123,10 +142,10 @@
                     @if ($jurnals->count() > 0)
                         <tfoot>
                             <tr>
-                                <td colspan="5" class="text-end">Total:</td>
-                                <td class="text-end">{{ number_format($totalDebit, 2, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($totalKredit, 2, ',', '.') }}</td>
-                                <td colspan="6"></td>
+                                <td colspan="6" class="text-end fw-bold">Total:</td>
+                                <td class="text-end fw-bold">{{ number_format($totalDebit, 2, ',', '.') }}</td>
+                                <td class="text-end fw-bold">{{ number_format($totalKredit, 2, ',', '.') }}</td>
+                                <td></td>
                             </tr>
                         </tfoot>
                     @endif
@@ -155,6 +174,14 @@
             minDate: "{{ request('tgl_dari') ?? null }}",
             maxDate: "today",
             allowInput: true,
+        });
+
+        // Pilih semua checkbox
+        document.getElementById('checkAll').addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('input[name="ids[]"]');
+            for (const cb of checkboxes) {
+                cb.checked = this.checked;
+            }
         });
     </script>
 @endsection

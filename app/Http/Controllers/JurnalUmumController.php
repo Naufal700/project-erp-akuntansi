@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Coa;
 use App\Models\JurnalUmum;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class JurnalUmumController extends Controller
 {
@@ -154,5 +155,17 @@ class JurnalUmumController extends Controller
         JurnalUmum::whereIn('id', $ids)->delete();
 
         return redirect()->route('jurnal_umum.index')->with('success', 'Jurnal yang dipilih berhasil dihapus.');
+    }
+    public function deleteSelected(Request $request)
+    {
+        $ids = $request->input('ids');
+
+        if (!$ids) {
+            return redirect()->route('jurnal_umum.index')->with('error', 'Tidak ada jurnal yang dipilih.');
+        }
+
+        DB::table('jurnal_umum')->whereIn('id', $ids)->delete();
+
+        return redirect()->route('jurnal_umum.index')->with('success', 'Beberapa jurnal berhasil dihapus.');
     }
 }

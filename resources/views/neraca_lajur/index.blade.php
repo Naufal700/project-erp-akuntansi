@@ -96,13 +96,22 @@
                                 </td>
                                 @foreach (['saldo_awal_debit', 'saldo_awal_kredit', 'mutasi_debit', 'mutasi_kredit', 'neraca_saldo_debit', 'neraca_saldo_kredit', 'penyesuaian_debit', 'penyesuaian_kredit', 'neraca_sesudah_debit', 'neraca_sesudah_kredit', 'laba_rugi_debit', 'laba_rugi_kredit', 'neraca_debit', 'neraca_kredit'] as $kolom)
                                     @php
-                                        $nilai = isset($akun[$kolom])
-                                            ? (float) str_replace(['.', ','], '', $akun[$kolom])
-                                            : 0;
+                                        $nilai = (float) $akun[$kolom];
                                         $total[$kolom] += $nilai;
+                                        $tampilkan = in_array($kolom, [
+                                            'saldo_awal_kredit',
+                                            'mutasi_kredit',
+                                            'neraca_saldo_kredit',
+                                            'penyesuaian_kredit',
+                                            'neraca_sesudah_kredit',
+                                            'laba_rugi_kredit',
+                                            'neraca_kredit',
+                                        ])
+                                            ? abs($nilai)
+                                            : $nilai;
                                     @endphp
                                     <td class="text-end text-dark text-nowrap">
-                                        {{ number_format(str_contains($kolom, 'kredit') ? abs($akun[$kolom]) : $akun[$kolom], 0, ',', '.') }}
+                                        {{ number_format($tampilkan, 0, ',', '.') }}
                                     </td>
                                 @endforeach
                             </tr>
@@ -116,8 +125,21 @@
                         <tr>
                             <td colspan="2" class="text-center text-nowrap">TOTAL</td>
                             @foreach ($total as $kolom => $jumlah)
+                                @php
+                                    $tampilkan = in_array($kolom, [
+                                        'saldo_awal_kredit',
+                                        'mutasi_kredit',
+                                        'neraca_saldo_kredit',
+                                        'penyesuaian_kredit',
+                                        'neraca_sesudah_kredit',
+                                        'laba_rugi_kredit',
+                                        'neraca_kredit',
+                                    ])
+                                        ? abs($jumlah)
+                                        : $jumlah;
+                                @endphp
                                 <td class="text-nowrap">
-                                    {{ number_format(strpos($kolom, 'kredit') !== false ? abs($jumlah) : $jumlah, 0, ',', '.') }}
+                                    {{ number_format($tampilkan, 0, ',', '.') }}
                                 </td>
                             @endforeach
                         </tr>

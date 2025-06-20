@@ -251,6 +251,7 @@ Route::prefix('akuntansi')->group(function () {
 
     Route::delete('jurnal_umum/{id}', [JurnalUmumController::class, 'destroy'])->name('jurnal_umum.destroy');
     Route::delete('jurnal_umum/bulk-destroy', [JurnalUmumController::class, 'bulkDestroy'])->name('jurnal_umum.bulkDestroy');
+    Route::delete('/jurnal-umum/delete-selected', [JurnalUmumController::class, 'deleteSelected'])->name('jurnal_umum.deleteSelected');
 });
 
 Route::prefix('akuntansi')->group(function () {
