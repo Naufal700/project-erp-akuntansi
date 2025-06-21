@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Coa;
 use App\Models\JurnalUmum;
-use Illuminate\Http\Request;
 use App\Models\JurnalPenyesuaian;
+use Illuminate\Http\Request;
 use App\Exports\NeracaLajurExport;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -72,34 +72,24 @@ class NeracaLajurController extends Controller
 
                 // Laba Rugi
                 'laba_rugi_debit' => in_array($akun->tipe_akun, ['Beban', 'HPP']) ? $neracaSesudah : 0,
-                'laba_rugi_kredit' => in_array($akun->tipe_akun, ['Pendapatan']) ? $neracaSesudah : 0,
+                'laba_rugi_kredit' => in_array($akun->tipe_akun, ['Pendapatan']) ? abs($neracaSesudah) : 0,
 
                 // Neraca Akhir
                 'neraca_debit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah > 0 ? $neracaSesudah : 0,
                 'neraca_kredit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah < 0 ? abs($neracaSesudah) : 0,
             ];
         });
+        $periode = $request->input('periode', date('Y-m'));
+        $data = $this->getFilteredNeracaLajur($periode);
 
         return view('neraca_lajur.index', [
             'data' => collect($data),
             'periode' => $periode
         ]);
     }
-
-    private function getPosisi($tipe_akun)
-    {
-        return match ($tipe_akun) {
-            'Kas', 'Bank', 'Piutang', 'Persediaan', 'Aset Tetap', 'Aset' => 'Aktiva',
-            'Hutang', 'Kewajiban', 'Modal' => 'Pasiva',
-            'Pendapatan' => 'Pendapatan',
-            'Beban', 'HPP' => 'Beban',
-            default => 'Lainnya',
-        };
-    }
-
     public function export(Request $request)
     {
-        $periode = $request->get('periode');
+        $periode = $request->get('periode', date('Y-m'));
         $data = $this->getFilteredNeracaLajur($periode);
 
         return Excel::download(new NeracaLajurExport($data, $periode), 'neraca_lajur_' . $periode . '.xlsx');
@@ -107,66 +97,74 @@ class NeracaLajurController extends Controller
 
     private function getFilteredNeracaLajur($periode)
     {
-        // Ambil hanya akun yang pernah dipakai di jurnal umum pada periode tersebut
-        $akunDipakai = JurnalUmum::whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
-            ->pluck('kode_akun')
-            ->unique();
+        return Coa::orderBy('kode_akun')->get()->map(function ($akun) use ($periode) {
+            $kode = $akun->kode_akun;
 
-        $data = Coa::whereIn('kode_akun', $akunDipakai)
-            ->orderBy('kode_akun')
-            ->get()
-            ->map(function ($akun) use ($periode) {
-                $kode = $akun->kode_akun;
+            // Cek saldo awal per periode (jika kamu simpan per periode, sesuaikan)
+            $saldo_awal_debit = $akun->periode_saldo_awal === $periode ? (float) $akun->saldo_awal_debit : 0;
+            $saldo_awal_kredit = $akun->periode_saldo_awal === $periode ? (float) $akun->saldo_awal_kredit : 0;
+            $saldoAwal = $saldo_awal_debit - $saldo_awal_kredit;
 
-                $mutasiDebit = JurnalUmum::where('kode_akun', $kode)
-                    ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
-                    ->sum('nominal_debit');
+            // Mutasi
+            $mutasiDebit = (float) JurnalUmum::where('kode_akun', $kode)
+                ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
+                ->sum('nominal_debit');
 
-                $mutasiKredit = JurnalUmum::where('kode_akun', $kode)
-                    ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
-                    ->sum('nominal_kredit');
+            $mutasiKredit = (float) JurnalUmum::where('kode_akun', $kode)
+                ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
+                ->sum('nominal_kredit');
 
-                $penyesuaianDebit = JurnalPenyesuaian::where('kode_akun', $kode)
-                    ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
-                    ->sum('nominal_debit');
+            // Penyesuaian
+            $penyesuaianDebit = (float) JurnalPenyesuaian::where('kode_akun', $kode)
+                ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
+                ->sum('nominal_debit');
 
-                $penyesuaianKredit = JurnalPenyesuaian::where('kode_akun', $kode)
-                    ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
-                    ->sum('nominal_kredit');
+            $penyesuaianKredit = (float) JurnalPenyesuaian::where('kode_akun', $kode)
+                ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$periode])
+                ->sum('nominal_kredit');
 
-                $saldoAwal = $akun->saldo_awal;
-                $neracaSaldo = ($saldoAwal + $mutasiDebit) - $mutasiKredit;
-                $neracaSesudah = $neracaSaldo + $penyesuaianDebit - $penyesuaianKredit;
+            // Filter akun yang tidak punya data sama sekali
+            if (
+                $saldo_awal_debit == 0 &&
+                $saldo_awal_kredit == 0 &&
+                $mutasiDebit == 0 &&
+                $mutasiKredit == 0 &&
+                $penyesuaianDebit == 0 &&
+                $penyesuaianKredit == 0
+            ) {
+                return null; // Akan difilter setelah map
+            }
 
-                return [
-                    'kode_akun' => $akun->kode_akun,
-                    'nama_akun' => $akun->nama_akun,
-                    'level' => $akun->level,
-                    'tipe_akun' => $akun->tipe_akun,
+            $neracaSaldo = $saldoAwal + $mutasiDebit - $mutasiKredit;
+            $neracaSesudah = $neracaSaldo + $penyesuaianDebit - $penyesuaianKredit;
 
-                    'saldo_awal_debit' => $saldoAwal > 0 ? $saldoAwal : 0,
-                    'saldo_awal_kredit' => $saldoAwal < 0 ? abs($saldoAwal) : 0,
+            return [
+                'kode_akun' => $akun->kode_akun,
+                'nama_akun' => $akun->nama_akun,
+                'level' => $akun->level,
+                'tipe_akun' => $akun->tipe_akun,
 
-                    'mutasi_debit' => $mutasiDebit,
-                    'mutasi_kredit' => $mutasiKredit,
+                'saldo_awal_debit' => $saldoAwal > 0 ? $saldoAwal : 0,
+                'saldo_awal_kredit' => $saldoAwal < 0 ? abs($saldoAwal) : 0,
 
-                    'neraca_saldo_debit' => $neracaSaldo > 0 ? $neracaSaldo : 0,
-                    'neraca_saldo_kredit' => $neracaSaldo < 0 ? abs($neracaSaldo) : 0,
+                'mutasi_debit' => $mutasiDebit,
+                'mutasi_kredit' => $mutasiKredit,
 
-                    'penyesuaian_debit' => $penyesuaianDebit,
-                    'penyesuaian_kredit' => $penyesuaianKredit,
+                'neraca_saldo_debit' => $neracaSaldo > 0 ? $neracaSaldo : 0,
+                'neraca_saldo_kredit' => $neracaSaldo < 0 ? abs($neracaSaldo) : 0,
 
-                    'neraca_sesudah_debit' => $neracaSesudah > 0 ? $neracaSesudah : 0,
-                    'neraca_sesudah_kredit' => $neracaSesudah < 0 ? abs($neracaSesudah) : 0,
+                'penyesuaian_debit' => $penyesuaianDebit,
+                'penyesuaian_kredit' => $penyesuaianKredit,
 
-                    'laba_rugi_debit' => in_array($akun->tipe_akun, ['Beban', 'HPP']) ? $neracaSesudah : 0,
-                    'laba_rugi_kredit' => in_array($akun->tipe_akun, ['Pendapatan']) ? $neracaSesudah : 0,
+                'neraca_sesudah_debit' => $neracaSesudah > 0 ? $neracaSesudah : 0,
+                'neraca_sesudah_kredit' => $neracaSesudah < 0 ? abs($neracaSesudah) : 0,
 
-                    'neraca_debit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah > 0 ? $neracaSesudah : 0,
-                    'neraca_kredit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah < 0 ? abs($neracaSesudah) : 0,
-                ];
-            });
+                'laba_rugi_debit' => in_array($akun->tipe_akun, ['Beban', 'HPP']) ? $neracaSesudah : 0,
+                'laba_rugi_kredit' => in_array($akun->tipe_akun, ['Pendapatan']) ? abs($neracaSesudah) : 0,
 
-        return collect($data);
+                'neraca_debit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah > 0 ? $neracaSesudah : 0,
+                'neraca_kredit' => !in_array($akun->tipe_akun, ['Pendapatan', 'Beban', 'HPP']) && $neracaSesudah < 0 ? abs($neracaSesudah) : 0,
+            ];
+        })->filter()->values();
     }
 }

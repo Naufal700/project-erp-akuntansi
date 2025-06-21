@@ -22,7 +22,7 @@
         <div class="card shadow-sm">
             <div class="card-body">
 
-                {{-- Toolbar & Import --}}
+                {{-- Toolbar --}}
                 <form method="GET" class="form-inline mb-3">
                     <div class="input-group mr-2">
                         <input type="text" name="search" value="{{ request('search') }}" class="form-control"
@@ -42,10 +42,6 @@
                     <a href="{{ route('coa.downloadTemplate') }}" class="btn btn-info mr-2">
                         <i class="fas fa-file-download"></i> Download Template
                     </a>
-                    {{-- Tombol Hapus Terpilih --}}
-                    <button type="submit" class="btn btn-danger" {{ $coas->count() ? '' : 'disabled' }}>
-                        <i class="fas fa-trash"></i> Hapus Terpilih
-                    </button>
                 </form>
 
                 {{-- Import Form --}}
@@ -64,6 +60,14 @@
                     @csrf
                     @method('DELETE')
 
+                    {{-- Tombol Hapus Terpilih --}}
+                    <div class="mb-2">
+                        <button type="submit" class="btn btn-danger" {{ $coas->count() ? '' : 'disabled' }}>
+                            <i class="fas fa-trash"></i> Hapus Terpilih
+                        </button>
+                    </div>
+
+                    {{-- Tabel COA --}}
                     <div class="table-responsive">
                         <table class="table table-hover table-striped table-bordered">
                             <thead class="thead-dark">
@@ -74,7 +78,9 @@
                                     <th>Tipe Akun</th>
                                     <th>Parent Kode</th>
                                     <th>Level</th>
-                                    <th class="text-end">Saldo Awal</th>
+                                    <th class="text-end">Saldo Awal Debit</th>
+                                    <th class="text-end">Saldo Awal Kredit</th>
+                                    <th>Periode Saldo Awal</th> {{-- ✅ Tambahan --}}
                                     <th width="120px">Aksi</th>
                                 </tr>
                             </thead>
@@ -86,8 +92,10 @@
                                         <td>{{ $coa->nama_akun }}</td>
                                         <td>{{ $coa->tipe_akun }}</td>
                                         <td>{{ $coa->parent_kode ?? '-' }}</td>
-                                        <td class="text-center">{{ $coa->level }}</td>
-                                        <td class="text-end">{{ number_format($coa->saldo_awal, 0, ',', '.') }}</td>
+                                        <td class="text-center">{{ $coa->level ?? '-' }}</td>
+                                        <td class="text-end">{{ number_format($coa->saldo_awal_debit, 0, ',', '.') }}</td>
+                                        <td class="text-end">{{ number_format($coa->saldo_awal_kredit, 0, ',', '.') }}</td>
+                                        <td>{{ $coa->periode_saldo_awal ?? '-' }}</td> {{-- ✅ Tambahan --}}
                                         <td class="text-center">
                                             <a href="{{ route('coa.edit', $coa->kode_akun) }}"
                                                 class="btn btn-sm btn-primary" title="Edit">
@@ -106,7 +114,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">Tidak ada data COA ditemukan.</td>
+                                        <td colspan="10" class="text-center text-muted">Tidak ada data COA ditemukan.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -126,10 +134,13 @@
 
 @section('js')
     <script>
-        // Select All Checkbox
-        document.getElementById('select-all').addEventListener('change', function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('select-all');
             const checkboxes = document.querySelectorAll('input[name="selected[]"]');
-            checkboxes.forEach(cb => cb.checked = this.checked);
+
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
         });
     </script>
 @stop

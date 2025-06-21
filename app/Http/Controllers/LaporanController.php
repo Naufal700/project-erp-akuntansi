@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Coa;
+use App\Models\JurnalUmum;
 use Illuminate\Http\Request;
 use App\Exports\NeracaExport;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -55,8 +57,8 @@ class LaporanController extends Controller
         // Ambil akun-akun per kategori
         $aset_lancar = DB::table('coa')->whereIn('tipe_akun', ['Kas', 'Bank', 'Piutang', 'Persediaan'])->get();
         $aset_tetap = DB::table('coa')->where('tipe_akun', 'Aset Tetap')->get();
-        $kewajiban_jp = DB::table('coa')->where('tipe_akun', 'Kewajiban')->get();
-        $kewajiban_pj = DB::table('coa')->where('tipe_akun', 'Hutang')->get();
+        $kewajiban_jp = DB::table('coa')->where('tipe_akun', 'Hutang Jangka Pendek')->get();
+        $kewajiban_pj = DB::table('coa')->where('tipe_akun', 'Hutang Jangka Panjang')->get();
         $modal = DB::table('coa')->where('tipe_akun', 'Modal')->get();
 
         // Hitung Laba Ditahan (s/d akhir tahun sebelumnya)
@@ -165,8 +167,8 @@ class LaporanController extends Controller
             $posisi_normal = $this->getPosisiNormal($akun->tipe_akun);
 
             $saldo = $posisi_normal === 'debit'
-                ? $akun->saldo_awal + ($jurnal->total_debit - $jurnal->total_kredit)
-                : $akun->saldo_awal + ($jurnal->total_kredit - $jurnal->total_debit);
+                ? $akun->saldo_awal_debit + ($jurnal->total_debit - $jurnal->total_kredit)
+                : $akun->saldo_awal_kredit + ($jurnal->total_kredit - $jurnal->total_debit);
 
             $result[] = [
                 'kode_akun' => $akun->kode_akun,
@@ -307,7 +309,7 @@ class LaporanController extends Controller
 
         $modalAwal = DB::table('coa')
             ->where('tipe_akun', 'Modal')
-            ->sum('saldo_awal');
+            ->sum('saldo_awal_kredit');
 
         $setoranModal = DB::table('jurnal_umum')
             ->join('coa', 'coa.kode_akun', '=', 'jurnal_umum.kode_akun')
@@ -345,5 +347,54 @@ class LaporanController extends Controller
             'tanggal_awal',
             'tanggal_akhir'
         ));
+    }
+    public function exportPdf(Request $request)
+    {
+        $tanggal_awal = $request->tanggal_awal;
+        $tanggal_akhir = $request->tanggal_akhir;
+
+        $data = $this->getDataLaporanNeraca($tanggal_awal, $tanggal_akhir); // fungsi ini harus sudah ada
+
+        $pdf = Pdf::loadView('laporan.neraca_pdf', array_merge($data, [
+            'tanggal_awal' => $tanggal_awal,
+            'tanggal_akhir' => $tanggal_akhir,
+        ]));
+
+        return $pdf->stream('laporan_neraca_' . $tanggal_akhir . '.pdf');
+    }
+    private function getDataLaporanNeraca($tanggal_awal, $tanggal_akhir)
+    {
+        // Ambil semua data COA dengan saldo akhir dalam periode
+        $coa = Coa::all();
+
+        // Ambil saldo berdasarkan jurnal umum dalam rentang tanggal
+        $coa = $coa->map(function ($akun) use ($tanggal_awal, $tanggal_akhir) {
+            $debit = $akun->jurnalUmum()
+                ->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir])
+                ->sum('nominal_debit');
+            $kredit = $akun->jurnalUmum()
+                ->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir])
+                ->sum('nominal_kredit');
+
+            $akun->saldo = ($akun->saldo_awal + $debit) - $kredit;
+            return $akun;
+        });
+
+        return [
+            'aset_lancar'      => $coa->where('tipe_akun', 'Kas')->merge($coa->where('tipe_akun', 'Piutang')),
+            'aset_tetap'       => $coa->where('tipe_akun', 'Aset Tetap'),
+            'kewajiban_jp'     => $coa->where('tipe_akun', 'Hutang Jangka Pendek'),
+            'kewajiban_pj'     => $coa->where('tipe_akun', 'Hutang Jangka Panjang'),
+            'modal'            => $coa->where('tipe_akun', 'Modal'),
+            'laba_ditahan'     => 0, // hitung jika ada data
+            'laba_berjalan'    => 0, // hitung jika ada data
+            'sub_aset_lancar'  => $coa->whereIn('tipe_akun', ['Kas', 'Piutang'])->sum('saldo'),
+            'sub_aset_tetap'   => $coa->where('tipe_akun', 'Aset Tetap')->sum('saldo'),
+            'total_aset'       => $coa->whereIn('tipe_akun', ['Kas', 'Piutang', 'Aset Tetap'])->sum('saldo'),
+            'sub_kewajiban_jp' => $coa->where('tipe_akun', 'Hutang Jangka Pendek')->sum('saldo'),
+            'sub_kewajiban_pj' => $coa->where('tipe_akun', 'Hutang Jangka Panjang')->sum('saldo'),
+            'total_modal'      => $coa->where('tipe_akun', 'Modal')->sum('saldo'), // + laba ditahan + berjalan
+            'total_passiva'    => $coa->whereIn('tipe_akun', ['Modal', 'Hutang Jangka Pendek', 'Hutang Jangka Panjang'])->sum('saldo')
+        ];
     }
 }

@@ -19,8 +19,11 @@ class Coa extends Model
         'tipe_akun',
         'parent_kode',
         'level',
-        'saldo_awal'
+        'saldo_awal_debit',
+        'saldo_awal_kredit',
+        'periode_saldo_awal',
     ];
+
     public static function getSaldoAkun($tanggal)
     {
         return DB::table('coa as c')
@@ -63,7 +66,8 @@ class Coa extends Model
             ->select(
                 'c.kode_akun',
                 'c.nama_akun',
-                'c.saldo_awal',
+                'c.saldo_awal_debit',
+                'c.saldo_awal_kredit',
                 'c.level',
                 DB::raw('IFNULL(ju.total_debit, 0) as total_debit'),
                 DB::raw('IFNULL(ju.total_kredit, 0) as total_kredit')
@@ -72,5 +76,19 @@ class Coa extends Model
             ->get();
 
         return view('neraca_saldo', compact('data_neraca', 'tanggal'));
+    }
+
+    public function jurnalUmum()
+    {
+        return $this->hasMany(JurnalUmum::class, 'kode_akun', 'kode_akun');
+    }
+    public function akunDebit()
+    {
+        return $this->belongsTo(Coa::class, 'kode_akun_debit', 'kode_akun');
+    }
+
+    public function akunKredit()
+    {
+        return $this->belongsTo(Coa::class, 'kode_akun_kredit', 'kode_akun');
     }
 }

@@ -6,65 +6,66 @@
 
 @section('adminlte_css_pre')
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
         body.login-page {
-            background-color: #f0f2f5;
+            background-color: #f4f6f9;
             font-family: 'Poppins', sans-serif;
-            color: #333;
+            color: #343a40;
         }
 
         .login-box {
-            width: 100%;
-            max-width: 400px;
-            margin: auto;
+            max-width: 420px;
+            margin: 0 auto;
         }
 
         .card {
             background: #fff;
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            color: #000;
+            border-radius: 12px;
+            padding: 2rem 1.8rem;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
         }
 
         .card h2 {
             text-align: center;
-            margin-bottom: 1.5rem;
             color: #1877f2;
             font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            font-weight: 500;
+            transition: border 0.2s ease-in-out;
+        }
+
+        .form-control:focus {
+            border-color: #1877f2;
+            box-shadow: none;
         }
 
         .input-group-text {
             background-color: #e9ecef;
         }
 
-        input.form-control {
-            background-color: #f8f9fa;
-            border: 1px solid #ced4da;
-            font-weight: 500;
-        }
-
-        input.form-control:focus {
-            border-color: #1877f2;
-            box-shadow: none;
-        }
-
-        .btn-fb {
+        .btn-login {
             background-color: #1877f2;
             border: none;
-            color: #fff;
             font-weight: 600;
-            border-radius: 6px;
             padding: 0.6rem 1rem;
+            color: #fff;
             font-size: 1rem;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            border-radius: 6px;
+            transition: background 0.2s ease-in-out;
         }
 
-        .btn-fb:hover {
-            background-color: #166fe5;
+        .btn-login:hover {
+            background-color: #145ecf;
+        }
+
+        .invalid-feedback {
+            font-size: 0.875rem;
         }
     </style>
 @stop
@@ -77,36 +78,44 @@
     <form action="{{ $loginUrl }}" method="post">
         @csrf
 
+        {{-- Email --}}
         <div class="input-group mb-3">
             <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="Email"
                 value="{{ old('email') }}" required autofocus>
             <div class="input-group-append">
-                <div class="input-group-text"><span class="fas fa-envelope"></span></div>
+                <div class="input-group-text">
+                    <span class="fas fa-envelope"></span>
+                </div>
             </div>
             @error('email')
                 <span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>
             @enderror
         </div>
 
+        {{-- Password --}}
         <div class="input-group mb-4">
             <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
                 placeholder="Kata Sandi" required>
             <div class="input-group-append">
-                <div class="input-group-text"><span class="fas fa-lock"></span></div>
+                <div class="input-group-text">
+                    <span class="fas fa-lock"></span>
+                </div>
             </div>
             @error('password')
                 <span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>
             @enderror
         </div>
 
+        {{-- Submit --}}
         <div class="mb-3 text-center">
-            <button type="submit" class="btn btn-fb">
-                <i class="fas fa-sign-in-alt"></i> Masuk
+            <button type="submit" class="btn btn-login w-100">
+                <i class="fas fa-sign-in-alt me-1"></i> Masuk
             </button>
         </div>
     </form>
 @endsection
 
 @section('auth_footer')
-    {{-- Kosongkan footer --}}
+    {{-- Optional: Tambah link daftar atau lupa password --}}
+    {{-- <p class="text-center mt-2"><a href="#">Lupa Kata Sandi?</a></p> --}}
 @endsection

@@ -89,13 +89,12 @@ class MappingJurnalController extends Controller
         return redirect()->route('mapping_jurnal.index')->with('success', 'Mapping jurnal berhasil diupdate.');
     }
 
-    // downloadTemplate()
     public function downloadTemplate()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Header baru
+        // Judul kolom
         $sheet->fromArray([
             'modul',
             'event',
@@ -107,7 +106,7 @@ class MappingJurnalController extends Controller
             'arus_kas_keterangan'
         ], null, 'A1');
 
-        // Contoh baris
+        // Contoh baris pengisian
         $sheet->fromArray([
             'Penjualan',
             'Faktur Penjualan',
@@ -119,15 +118,15 @@ class MappingJurnalController extends Controller
             'Penjualan barang tunai'
         ], null, 'A2');
 
-        $writer = new Xlsx($spreadsheet);
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $filename = 'template_mapping_jurnal.xlsx';
 
+        // Simpan ke file sementara
         $temp_file = tempnam(sys_get_temp_dir(), $filename);
         $writer->save($temp_file);
 
         return response()->download($temp_file, $filename)->deleteFileAfterSend(true);
     }
-
     // import()
     public function import(Request $request)
     {
@@ -171,5 +170,67 @@ class MappingJurnalController extends Controller
         $mapping->delete();
 
         return redirect()->route('mapping_jurnal.index')->with('success', 'Mapping jurnal berhasil dihapus.');
+    }
+    public function show($id)
+    {
+        $mapping = MappingJurnal::with(['akunDebit', 'akunKredit'])->findOrFail($id);
+        return view('mapping_jurnal.show', compact('mapping'));
+    }
+    public function exportTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Judul kolom
+        $headers = [
+            'No',
+            'Modul',
+            'Event',
+            'Kode Akun Debit',
+            'Nama Akun Debit',
+            'Kode Akun Kredit',
+            'Nama Akun Kredit',
+            'Keterangan',
+            'Kelompok Arus Kas',
+            'Jenis Arus Kas',
+            'Keterangan Arus Kas'
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        // Ambil data mapping jurnal + relasi akun
+        $data = MappingJurnal::with(['akunDebit', 'akunKredit'])->get();
+
+        $rowNum = 2;
+        foreach ($data as $index => $item) {
+            $sheet->fromArray([
+                $index + 1,
+                $item->modul,
+                $item->event,
+                $item->kode_akun_debit,
+                optional($item->akunDebit)->nama_akun,
+                $item->kode_akun_kredit,
+                optional($item->akunKredit)->nama_akun,
+                $item->keterangan,
+                $item->arus_kas_kelompok,
+                $item->arus_kas_jenis,
+                $item->arus_kas_keterangan
+            ], null, 'A' . $rowNum);
+
+            $rowNum++;
+        }
+
+        // Optional: Autosize kolom
+        foreach (range('A', 'K') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $filename = 'mapping_jurnal_export.xlsx';
+
+        $tempFile = tempnam(sys_get_temp_dir(), $filename);
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 }

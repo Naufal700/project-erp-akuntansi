@@ -19,18 +19,12 @@ class BukuBesarController extends Controller
 
         $all_coa = DB::table('coa')->orderBy('kode_akun')->get();
 
-        $query = DB::table('jurnal_umum')->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir]);
+        $kodeAkunTransaksi = $filter_akun
+            ? collect([$filter_akun])
+            : $all_coa->pluck('kode_akun');
 
-        if ($filter_akun) {
-            $query->where('kode_akun', $filter_akun);
-            $kodeAkunTransaksi = collect([$filter_akun]);
-        } else {
-            $kodeAkunTransaksi = $query->distinct()->pluck('kode_akun');
-        }
-
-        // Pagination manual untuk koleksi akun
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 5;
+        $perPage = 20;
         $currentPageItems = $kodeAkunTransaksi->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
         $data = [];
@@ -45,9 +39,16 @@ class BukuBesarController extends Controller
                 ->selectRaw('
                     COALESCE(SUM(nominal_debit),0) as total_debit,
                     COALESCE(SUM(nominal_kredit),0) as total_kredit
-                ')->first();
+                ')
+                ->first();
 
-            $saldo_awal = $coa->saldo_awal + ($saldoSebelum->total_debit - $saldoSebelum->total_kredit);
+            // Validasi berdasarkan periode saldo awal
+            $saldo_awal = 0;
+            if ($coa->periode_saldo_awal && substr($coa->periode_saldo_awal, 0, 7) <= substr($tanggal_awal, 0, 7)) {
+                $saldo_awal += ($coa->saldo_awal_debit ?? 0) - ($coa->saldo_awal_kredit ?? 0);
+            }
+
+            $saldo_awal += $saldoSebelum->total_debit - $saldoSebelum->total_kredit;
 
             $jurnal = DB::table('jurnal_umum')
                 ->where('kode_akun', $kode_akun)
@@ -59,14 +60,16 @@ class BukuBesarController extends Controller
             $total_kredit = $jurnal->sum('nominal_kredit');
             $saldo_akhir = $saldo_awal + $total_debit - $total_kredit;
 
-            $data[] = [
-                'coa' => $coa,
-                'saldo_awal' => $saldo_awal,
-                'jurnal' => $jurnal,
-                'total_debit' => $total_debit,
-                'total_kredit' => $total_kredit,
-                'saldo_akhir' => $saldo_akhir,
-            ];
+            if ($jurnal->count() > 0 || $saldo_awal != 0) {
+                $data[] = [
+                    'coa' => $coa,
+                    'saldo_awal' => $saldo_awal,
+                    'jurnal' => $jurnal,
+                    'total_debit' => $total_debit,
+                    'total_kredit' => $total_kredit,
+                    'saldo_akhir' => $saldo_akhir,
+                ];
+            }
         }
 
         $paginatedData = new LengthAwarePaginator(
@@ -78,27 +81,22 @@ class BukuBesarController extends Controller
         );
 
         return view('buku_besar.index', [
-            'data' => $paginatedData, // <- ganti dari $data ke $paginatedData
+            'data' => $paginatedData,
             'tanggal_awal' => $tanggal_awal,
             'tanggal_akhir' => $tanggal_akhir,
             'all_coa' => $all_coa,
         ]);
     }
 
-    protected function prepareDataForExport($filters)
+    public function prepareDataForExport($filters)
     {
         $tanggal_awal = $filters['tanggal_awal'] ?? date('Y-m-01');
         $tanggal_akhir = $filters['tanggal_akhir'] ?? date('Y-m-t');
         $filter_akun = $filters['akun'] ?? null;
 
-        $query = DB::table('jurnal_umum')->whereBetween('tanggal', [$tanggal_awal, $tanggal_akhir]);
-
-        if ($filter_akun) {
-            $query->where('kode_akun', $filter_akun);
-            $kodeAkunTransaksi = collect([$filter_akun]);
-        } else {
-            $kodeAkunTransaksi = $query->distinct()->pluck('kode_akun');
-        }
+        $kodeAkunTransaksi = $filter_akun
+            ? collect([$filter_akun])
+            : DB::table('coa')->orderBy('kode_akun')->pluck('kode_akun');
 
         $data = [];
 
@@ -112,9 +110,15 @@ class BukuBesarController extends Controller
                 ->selectRaw('
                     COALESCE(SUM(nominal_debit),0) as total_debit,
                     COALESCE(SUM(nominal_kredit),0) as total_kredit
-                ')->first();
+                ')
+                ->first();
 
-            $saldo_awal = $coa->saldo_awal + ($saldoSebelum->total_debit - $saldoSebelum->total_kredit);
+            $saldo_awal = 0;
+            if ($coa->periode_saldo_awal && substr($coa->periode_saldo_awal, 0, 7) <= substr($tanggal_awal, 0, 7)) {
+                $saldo_awal += ($coa->saldo_awal_debit ?? 0) - ($coa->saldo_awal_kredit ?? 0);
+            }
+
+            $saldo_awal += $saldoSebelum->total_debit - $saldoSebelum->total_kredit;
 
             $jurnal = DB::table('jurnal_umum')
                 ->where('kode_akun', $kode_akun)
@@ -126,14 +130,16 @@ class BukuBesarController extends Controller
             $total_kredit = $jurnal->sum('nominal_kredit');
             $saldo_akhir = $saldo_awal + $total_debit - $total_kredit;
 
-            $data[] = [
-                'coa' => $coa,
-                'saldo_awal' => $saldo_awal,
-                'jurnal' => $jurnal,
-                'total_debit' => $total_debit,
-                'total_kredit' => $total_kredit,
-                'saldo_akhir' => $saldo_akhir,
-            ];
+            if ($jurnal->count() > 0 || $saldo_awal != 0) {
+                $data[] = [
+                    'coa' => $coa,
+                    'saldo_awal' => $saldo_awal,
+                    'jurnal' => $jurnal,
+                    'total_debit' => $total_debit,
+                    'total_kredit' => $total_kredit,
+                    'saldo_akhir' => $saldo_akhir,
+                ];
+            }
         }
 
         return $data;
@@ -141,12 +147,12 @@ class BukuBesarController extends Controller
 
     public function exportExcel(Request $request)
     {
-        $tanggal_awal = $request->tanggal_awal;
-        $tanggal_akhir = $request->tanggal_akhir;
-        $filter_akun = $request->kode_akun; // atau 'filter_akun' tergantung nama field request-nya
-
         return Excel::download(
-            new BukuBesarExport($tanggal_awal, $tanggal_akhir, $filter_akun),
+            new BukuBesarExport(
+                $request->tanggal_awal,
+                $request->tanggal_akhir,
+                $request->kode_akun
+            ),
             'buku_besar.xlsx'
         );
     }
@@ -154,24 +160,22 @@ class BukuBesarController extends Controller
     public function exportPDF(Request $request)
     {
         $data = $this->prepareDataForExport($request->all());
-
         $pdf = Pdf::loadView('buku_besar.export_pdf', compact('data'));
         return $pdf->download('buku_besar.pdf');
     }
+
     private function getDataBukuBesar(Request $request)
     {
         $tanggal_awal = $request->tanggal_awal;
         $tanggal_akhir = $request->tanggal_akhir;
         $kode_akun = $request->kode_akun;
 
-        $data = DB::table('jurnal_umum')
+        return DB::table('jurnal_umum')
             ->join('coa', 'jurnal_umum.kode_akun', '=', 'coa.kode_akun')
             ->select('jurnal_umum.*', 'coa.nama_akun')
             ->where('jurnal_umum.kode_akun', $kode_akun)
             ->whereBetween('jurnal_umum.tanggal', [$tanggal_awal, $tanggal_akhir])
             ->orderBy('jurnal_umum.tanggal')
             ->get();
-
-        return $data;
     }
 }

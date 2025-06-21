@@ -8,7 +8,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CoaExport;
 use App\Imports\CoaImport;
 use Illuminate\Validation\Rule;
-
+use Carbon\Carbon;
 
 class CoaController extends Controller
 {
@@ -49,19 +49,35 @@ class CoaController extends Controller
                     'Kas',
                     'Bank',
                     'Piutang',
-                    'Hutang',
+                    'Hutang Jangka Pendek',
+                    'Hutang Jangka Panjang',
                     'Persediaan',
                     'Aset Tetap',
                     'HPP',
                     'Penyesuaian',
-                    'Lainnya',
+                    'Lainnya'
                 ]),
             ],
             'parent_kode' => 'nullable|string|exists:coa,kode_akun',
             'level' => 'nullable|integer',
-            'saldo_awal' => 'required|numeric',
+            'saldo_awal_debit' => 'nullable|numeric|required_without:saldo_awal_kredit',
+            'saldo_awal_kredit' => 'nullable|numeric|required_without:saldo_awal_debit',
+            'periode_saldo_awal' => 'required|date_format:Y-m', // Validasi tambahan
         ]);
-        Coa::create($validated);
+
+        $validated['saldo_awal_debit'] = $validated['saldo_awal_debit'] ?? 0;
+        $validated['saldo_awal_kredit'] = $validated['saldo_awal_kredit'] ?? 0;
+
+        Coa::create([
+            'kode_akun' => $validated['kode_akun'],
+            'nama_akun' => $validated['nama_akun'],
+            'tipe_akun' => $validated['tipe_akun'],
+            'parent_kode' => $validated['parent_kode'] ?? null,
+            'level' => $validated['level'] ?? null,
+            'saldo_awal_debit' => $validated['saldo_awal_debit'],
+            'saldo_awal_kredit' => $validated['saldo_awal_kredit'],
+            'periode_saldo_awal' => $validated['periode_saldo_awal'],
+        ]);
 
         return redirect()->route('coa.index')->with('success', 'COA berhasil ditambahkan.');
     }
@@ -75,7 +91,6 @@ class CoaController extends Controller
 
     public function update(Request $request, $kode_akun)
     {
-        // Validasi dulu
         $validated = $request->validate([
             'nama_akun' => 'required|string|max:100',
             'tipe_akun' => [
@@ -89,28 +104,33 @@ class CoaController extends Controller
                     'Kas',
                     'Bank',
                     'Piutang',
-                    'Hutang',
+                    'Hutang Jangka Pendek',
+                    'Hutang Jangka Panjang',
                     'Persediaan',
                     'Aset Tetap',
                     'HPP',
                     'Penyesuaian',
-                    'Lainnya',
+                    'Lainnya'
                 ]),
             ],
             'parent_kode' => 'nullable|string|exists:coa,kode_akun',
             'level' => 'nullable|integer',
-            'saldo_awal' => 'required|numeric',
+            'saldo_awal_debit' => 'nullable|numeric|required_without:saldo_awal_kredit',
+            'saldo_awal_kredit' => 'nullable|numeric|required_without:saldo_awal_debit',
+            'periode_saldo_awal' => 'required|date_format:Y-m',
         ]);
 
-        // Ambil data yang mau diupdate
-        $coa = Coa::where('kode_akun', $kode_akun)->firstOrFail();
+        $coa = Coa::findOrFail($kode_akun);
 
-        // Update data dengan hasil validasi
-        $coa->update($validated);
-
-        // Debug (optional)
-        info('Validated tipe_akun: ' . $validated['tipe_akun'] . ' (' . gettype($validated['tipe_akun']) . ')');
-        info('Kode akun param: ' . $kode_akun . ' (' . gettype($kode_akun) . ')');
+        $coa->update([
+            'nama_akun' => $validated['nama_akun'],
+            'tipe_akun' => $validated['tipe_akun'],
+            'parent_kode' => $validated['parent_kode'] ?? null,
+            'level' => $validated['level'] ?? null,
+            'saldo_awal_debit' => $validated['saldo_awal_debit'] ?? 0,
+            'saldo_awal_kredit' => $validated['saldo_awal_kredit'] ?? 0,
+            'periode_saldo_awal' => $validated['periode_saldo_awal'],
+        ]);
 
         return redirect()->route('coa.index')->with('success', 'COA berhasil diupdate.');
     }
@@ -123,13 +143,11 @@ class CoaController extends Controller
         return redirect()->route('coa.index')->with('success', 'COA berhasil dihapus.');
     }
 
-    // Export template
     public function downloadTemplate()
     {
         return Excel::download(new CoaExport, 'template_coa.xlsx');
     }
 
-    // Import COA
     public function import(Request $request)
     {
         $request->validate([
@@ -143,13 +161,24 @@ class CoaController extends Controller
             return redirect()->back()->with('error', 'Import gagal: ' . $e->getMessage());
         }
     }
+
     public function bulkDelete(Request $request)
     {
-        if ($request->has('selected')) {
-            Coa::whereIn('kode_akun', $request->selected)->delete();
-            return back()->with('success', 'Beberapa data COA berhasil dihapus.');
+        $selected = $request->input('selected', []);
+
+        if (empty($selected)) {
+            return back()->with('error', 'Tidak ada data yang dipilih untuk dihapus.');
         }
 
-        return back()->with('error', 'Tidak ada data yang dipilih.');
+        $valid = collect($selected)->every(fn($kode) => is_string($kode) && trim($kode) !== '');
+        if (!$valid) {
+            return back()->with('error', 'Data yang dikirim tidak valid.');
+        }
+
+        $deleted = Coa::whereIn('kode_akun', $selected)->delete();
+
+        return $deleted
+            ? back()->with('success', "$deleted data COA berhasil dihapus.")
+            : back()->with('error', 'Tidak ada data yang berhasil dihapus.');
     }
 }

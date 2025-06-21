@@ -7,22 +7,18 @@
 @endsection
 
 @section('css')
-    <!-- Flatpickr CSS untuk date picker -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* Header sticky */
         .thead-dark.sticky-top {
             background-color: #343a40 !important;
             color: #fff;
             z-index: 10;
         }
 
-        /* Hover baris */
         tbody tr:hover {
             background-color: #f2f6fc;
         }
 
-        /* Footer total */
         tfoot tr {
             font-weight: bold;
             background-color: #e9ecef;
@@ -39,9 +35,10 @@
             </button>
         </div>
     @endif
+
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <a href="{{ route('jurnal_umum.create') }}" class="btn btn-primary btn-sm" title="Buat Jurnal Manual">
+            <a href="{{ route('jurnal_umum.create') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus"></i> Buat Jurnal Manual
             </a>
             <form id="formDeleteSelected" method="POST" action="{{ route('jurnal_umum.deleteSelected') }}">
@@ -53,6 +50,7 @@
                 </button>
             </form>
         </div>
+
         <div class="card-body">
             <form method="GET" action="{{ route('jurnal_umum.index') }}" class="row g-3 align-items-end mb-4">
                 <div class="col-md-3">
@@ -94,16 +92,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $totalDebit = 0;
-                            $totalKredit = 0;
-                        @endphp
-
                         @forelse($jurnals as $jurnal)
-                            @php
-                                $totalDebit += $jurnal->nominal_debit;
-                                $totalKredit += $jurnal->nominal_kredit;
-                            @endphp
                             <tr>
                                 <td>
                                     <input type="checkbox" name="ids[]" form="formDeleteSelected"
@@ -142,7 +131,7 @@
                     @if ($jurnals->count() > 0)
                         <tfoot>
                             <tr>
-                                <td colspan="6" class="text-end fw-bold">Total:</td>
+                                <td colspan="6" class="text-end fw-bold">Total Keseluruhan:</td>
                                 <td class="text-end fw-bold">{{ number_format($totalDebit, 2, ',', '.') }}</td>
                                 <td class="text-end fw-bold">{{ number_format($totalKredit, 2, ',', '.') }}</td>
                                 <td></td>
@@ -160,7 +149,6 @@
 @endsection
 
 @section('js')
-    <!-- Flatpickr JS untuk date picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         flatpickr("#tgl_dari", {
@@ -176,7 +164,6 @@
             allowInput: true,
         });
 
-        // Pilih semua checkbox
         document.getElementById('checkAll').addEventListener('click', function() {
             const checkboxes = document.querySelectorAll('input[name="ids[]"]');
             for (const cb of checkboxes) {

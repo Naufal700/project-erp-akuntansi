@@ -56,9 +56,6 @@
                 <a href="{{ route('mapping_jurnal.downloadTemplate') }}" class="btn btn-info mr-2">
                     <i class="fas fa-download"></i> Download Template
                 </a>
-                {{-- <a href="{{ route('mapping_jurnal.export') }}" class="btn btn-outline-success">
-                    <i class="fas fa-file-excel"></i> Export Excel
-                </a> --}}
             </form>
 
             {{-- Form Import Excel --}}

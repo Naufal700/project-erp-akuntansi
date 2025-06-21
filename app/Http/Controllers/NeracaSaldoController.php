@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use Illuminate\Http\Request;
 use App\Exports\NeracaSaldoExport;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 class NeracaSaldoController extends Controller
 {
     public function index(Request $request)
     {
+        // Penentuan tanggal berdasarkan filter
         $tanggal_awal = null;
         $tanggal_akhir = null;
 
-        if ($request->filter_type == 'periode') {
+        if ($request->filter_type === 'periode') {
             $tanggal_awal = $request->tanggal_awal;
             $tanggal_akhir = $request->tanggal_akhir;
-        } elseif ($request->filter_type == 'bulan') {
-            if ($request->bulan) {
-                $tanggal_awal = Carbon::parse($request->bulan)->startOfMonth()->toDateString();
-                $tanggal_akhir = Carbon::parse($request->bulan)->endOfMonth()->toDateString();
-            }
+        } elseif ($request->filter_type === 'bulan' && $request->bulan) {
+            $tanggal_awal = Carbon::parse($request->bulan)->startOfMonth()->toDateString();
+            $tanggal_akhir = Carbon::parse($request->bulan)->endOfMonth()->toDateString();
         }
 
+        // Default ke awal tahun s/d hari ini jika tidak ada filter
         if (!$tanggal_awal || !$tanggal_akhir) {
             $tanggal_awal = Carbon::now()->startOfYear()->toDateString();
             $tanggal_akhir = Carbon::now()->toDateString();
@@ -33,11 +33,11 @@ class NeracaSaldoController extends Controller
         $data_neraca = $this->ambilDataNeraca($tanggal_awal, $tanggal_akhir);
 
         return view('neraca_saldo.index', [
-            'data_neraca' => $data_neraca,
-            'tanggal_awal' => $tanggal_awal,
-            'tanggal_akhir' => $tanggal_akhir,
-            'filter_type' => $request->filter_type,
-            'bulan' => $request->bulan,
+            'data_neraca'    => $data_neraca,
+            'tanggal_awal'   => $tanggal_awal,
+            'tanggal_akhir'  => $tanggal_akhir,
+            'filter_type'    => $request->filter_type,
+            'bulan'          => $request->bulan,
         ]);
     }
 
@@ -46,14 +46,12 @@ class NeracaSaldoController extends Controller
         $tanggal_awal = null;
         $tanggal_akhir = null;
 
-        if ($request->filter_type == 'periode') {
+        if ($request->filter_type === 'periode') {
             $tanggal_awal = $request->tanggal_awal;
             $tanggal_akhir = $request->tanggal_akhir;
-        } elseif ($request->filter_type == 'bulan') {
-            if ($request->bulan) {
-                $tanggal_awal = Carbon::parse($request->bulan)->startOfMonth()->toDateString();
-                $tanggal_akhir = Carbon::parse($request->bulan)->endOfMonth()->toDateString();
-            }
+        } elseif ($request->filter_type === 'bulan' && $request->bulan) {
+            $tanggal_awal = Carbon::parse($request->bulan)->startOfMonth()->toDateString();
+            $tanggal_akhir = Carbon::parse($request->bulan)->endOfMonth()->toDateString();
         }
 
         if (!$tanggal_awal || !$tanggal_akhir) {
@@ -66,36 +64,51 @@ class NeracaSaldoController extends Controller
         return Excel::download(new NeracaSaldoExport($data_neraca), 'neraca_saldo.xlsx');
     }
 
-    // Refactor method ambilDataNeraca untuk menerima tanggal awal dan akhir
     protected function ambilDataNeraca($tanggal_awal, $tanggal_akhir)
     {
-        $data_neraca = DB::table('coa as c')
-            ->join(DB::raw("(
-            SELECT kode_akun,
-                   SUM(CASE WHEN tanggal < '{$tanggal_awal}' THEN nominal_debit ELSE 0 END) as saldo_awal_debit,
-                   SUM(CASE WHEN tanggal < '{$tanggal_awal}' THEN nominal_kredit ELSE 0 END) as saldo_awal_kredit,
-                   SUM(CASE WHEN tanggal BETWEEN '{$tanggal_awal}' AND '{$tanggal_akhir}' THEN nominal_debit ELSE 0 END) as total_debit,
-                   SUM(CASE WHEN tanggal BETWEEN '{$tanggal_awal}' AND '{$tanggal_akhir}' THEN nominal_kredit ELSE 0 END) as total_kredit
-            FROM jurnal_umum
-            GROUP BY kode_akun
-        ) as ju"), 'c.kode_akun', '=', 'ju.kode_akun')
-            ->select(
-                'c.kode_akun',
-                'c.nama_akun',
-                'c.level',
-                'c.saldo_awal',
-                DB::raw('COALESCE(ju.saldo_awal_debit,0) as saldo_awal_debit'),
-                DB::raw('COALESCE(ju.saldo_awal_kredit,0) as saldo_awal_kredit'),
-                DB::raw('COALESCE(ju.total_debit,0) as total_debit'),
-                DB::raw('COALESCE(ju.total_kredit,0) as total_kredit')
-            )
-            ->orderBy('c.kode_akun')
-            ->get();
+        $coaList = DB::table('coa')->orderBy('kode_akun')->get();
 
-        foreach ($data_neraca as $akun) {
-            $akun->saldo_awal = ($akun->saldo_awal ?? 0) + $akun->saldo_awal_debit - $akun->saldo_awal_kredit;
+        $jurnalData = DB::table('jurnal_umum')
+            ->select(
+                'kode_akun',
+                DB::raw("SUM(CASE WHEN tanggal < '{$tanggal_awal}' THEN nominal_debit ELSE 0 END) AS saldo_awal_debit_jurnal"),
+                DB::raw("SUM(CASE WHEN tanggal < '{$tanggal_awal}' THEN nominal_kredit ELSE 0 END) AS saldo_awal_kredit_jurnal"),
+                DB::raw("SUM(CASE WHEN tanggal BETWEEN '{$tanggal_awal}' AND '{$tanggal_akhir}' THEN nominal_debit ELSE 0 END) AS total_debit"),
+                DB::raw("SUM(CASE WHEN tanggal BETWEEN '{$tanggal_awal}' AND '{$tanggal_akhir}' THEN nominal_kredit ELSE 0 END) AS total_kredit")
+            )
+            ->groupBy('kode_akun')
+            ->get()
+            ->keyBy('kode_akun');
+
+        $data = [];
+
+        foreach ($coaList as $akun) {
+            $jurnal = $jurnalData[$akun->kode_akun] ?? null;
+
+            $saldo_awal_debit = 0;
+            $saldo_awal_kredit = 0;
+
+            // Gunakan saldo awal dari COA jika periodenya valid
+            if (!empty($akun->periode_saldo_awal) && substr($akun->periode_saldo_awal, 0, 7) <= substr($tanggal_awal, 0, 7)) {
+                $saldo_awal_debit += $akun->saldo_awal_debit;
+                $saldo_awal_kredit += $akun->saldo_awal_kredit;
+            }
+
+            // Tambahkan jurnal sebelum periode
+            $saldo_awal_debit += $jurnal->saldo_awal_debit_jurnal ?? 0;
+            $saldo_awal_kredit += $jurnal->saldo_awal_kredit_jurnal ?? 0;
+
+            $data[] = (object)[
+                'kode_akun'         => $akun->kode_akun,
+                'nama_akun'         => $akun->nama_akun,
+                'level'             => $akun->level,
+                'saldo_awal_debit'  => $saldo_awal_debit,
+                'saldo_awal_kredit' => $saldo_awal_kredit,
+                'total_debit'       => $jurnal->total_debit ?? 0,
+                'total_kredit'      => $jurnal->total_kredit ?? 0,
+            ];
         }
 
-        return $data_neraca;
+        return $data;
     }
 }

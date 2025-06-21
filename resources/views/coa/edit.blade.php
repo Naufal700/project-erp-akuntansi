@@ -83,25 +83,40 @@
                             </div>
 
                             <div class="form-group mb-4">
-                                <label for="saldo_awal" class="form-label font-weight-bold">
-                                    <i class="fas fa-wallet mr-1 text-secondary"></i> Saldo Awal
+                                <label for="saldo_awal_debit" class="form-label font-weight-bold">
+                                    <i class="fas fa-wallet mr-1 text-secondary"></i> Saldo Awal Debit
                                 </label>
-                                <input type="number" class="form-control" id="saldo_awal" name="saldo_awal"
-                                    value="{{ old('saldo_awal', $coa->saldo_awal) }}" required min="0"
-                                    placeholder="Masukkan Saldo Awal">
+                                <input type="number" class="form-control" id="saldo_awal_debit" name="saldo_awal_debit"
+                                    value="{{ old('saldo_awal_debit', $coa->saldo_awal_debit > 0 ? $coa->saldo_awal_debit : 0) }}"
+                                    min="0" placeholder="Masukkan Saldo Awal Debit">
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="saldo_awal_kredit" class="form-label font-weight-bold">
+                                    <i class="fas fa-wallet mr-1 text-secondary"></i> Saldo Awal Kredit
+                                </label>
+                                <input type="number" class="form-control" id="saldo_awal_kredit" name="saldo_awal_kredit"
+                                    value="{{ old('saldo_awal_kredit', $coa->saldo_awal_kredit > 0 ? $coa->saldo_awal_kredit : 0) }}"
+                                    min="0" placeholder="Masukkan Saldo Awal Kredit">
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="periode_saldo_awal" class="form-label font-weight-bold">
+                                    <i class="fas fa-calendar-alt mr-1 text-secondary"></i> Periode Saldo Awal
+                                </label>
+                                <input type="month" class="form-control" id="periode_saldo_awal" name="periode_saldo_awal"
+                                    value="{{ old('periode_saldo_awal', $coa->periode_saldo_awal) }}" required>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="d-flex justify-content-start">
-                        <button type="submit" class="btn btn-primary px-4 mr-3"
-                            style="transition: background-color 0.3s ease;">
-                            <i class="fas fa-save mr-2"></i> Update
-                        </button>
-                        <a href="{{ route('coa.index') }}" class="btn btn-outline-secondary px-4">
-                            <i class="fas fa-arrow-left mr-2"></i> Batal
-                        </a>
-                    </div>
+                        <div class="d-flex justify-content-start">
+                            <button type="submit" class="btn btn-primary px-4 mr-3"
+                                style="transition: background-color 0.3s ease;">
+                                <i class="fas fa-save mr-2"></i> Update
+                            </button>
+                            <a href="{{ route('coa.index') }}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-arrow-left mr-2"></i> Batal
+                            </a>
+                        </div>
                 </form>
             </div>
         </div>

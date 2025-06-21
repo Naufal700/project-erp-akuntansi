@@ -75,37 +75,40 @@
                         </tr>
                     </thead>
                     <tbody>
-
                         @php
                             $grand_total_debit = 0;
                             $grand_total_kredit = 0;
-                            $total_saldo_akhir = 0; // saldo akhir semua akun
+                            $total_saldo_akhir = 0;
                         @endphp
 
-                        @foreach ($data as $item)
-                            {{-- Header per akun --}}
+                        @forelse ($data as $item)
+                            {{-- Header akun --}}
                             <tr class="bg-secondary text-white font-weight-bold">
                                 <td colspan="7">
                                     Akun: {{ $item['coa']->kode_akun }} - {{ $item['coa']->nama_akun }}
                                 </td>
                             </tr>
 
-                            {{-- Saldo awal --}}
-                            @if (abs($item['saldo_awal']) > 0)
+                            {{-- Saldo Awal --}}
+                            @php
+                                $saldo_awal = $item['saldo_awal'];
+                                $saldo_running = $saldo_awal;
+                            @endphp
+
+                            @if ($saldo_awal != 0)
                                 <tr class="bg-light font-weight-bold">
                                     <td></td>
                                     <td></td>
-                                    <td>Saldo Awal</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="text-right">{{ number_format($item['saldo_awal'], 2, ',', '.') }}</td>
-                                    <td></td>
+                                    <td colspan="2">Saldo Awal</td>
+                                    <td class="text-right">
+                                        {{ $saldo_awal > 0 ? number_format($saldo_awal, 2, ',', '.') : '-' }}
+                                    </td>
+                                    <td class="text-right">
+                                        {{ $saldo_awal < 0 ? number_format(abs($saldo_awal), 2, ',', '.') : '-' }}
+                                    </td>
+                                    <td class="text-right">{{ number_format(abs($saldo_running), 2, ',', '.') }}</td>
                                 </tr>
                             @endif
-
-                            @php
-                                $saldo_running = $item['saldo_awal'];
-                            @endphp
 
                             @forelse ($item['jurnal'] as $jurnal)
                                 @php
@@ -113,37 +116,39 @@
                                     $grand_total_debit += $jurnal->nominal_debit;
                                     $grand_total_kredit += $jurnal->nominal_kredit;
                                 @endphp
-                                <tr style="transition: background-color 0.2s;">
+                                <tr class="transaksi-row">
                                     <td>{{ tanggal_indonesia($jurnal->tanggal) }}</td>
                                     <td>{{ $item['coa']->kode_akun }} - {{ $item['coa']->nama_akun }}</td>
-                                    <td>{{ $jurnal->ref }}</td>
-                                    <td>{{ $jurnal->keterangan }}</td>
-                                    <td class="text-right text-dark">
-                                        {{ number_format($jurnal->nominal_debit, 2, ',', '.') }}</td>
-                                    <td class="text-right text-dark">
-                                        {{ number_format($jurnal->nominal_kredit, 2, ',', '.') }}</td>
-                                    <td class="text-right text-dark">{{ number_format($saldo_running, 2, ',', '.') }}</td>
+                                    <td>{{ $jurnal->ref ?? '-' }}</td>
+                                    <td>{{ $jurnal->keterangan ?? '-' }}</td>
+                                    <td class="text-right">
+                                        {{ $jurnal->nominal_debit > 0 ? number_format($jurnal->nominal_debit, 2, ',', '.') : '-' }}
+                                    </td>
+                                    <td class="text-right">
+                                        {{ $jurnal->nominal_kredit > 0 ? number_format($jurnal->nominal_kredit, 2, ',', '.') : '-' }}
+                                    </td>
+                                    <td class="text-right">{{ number_format(abs($saldo_running), 2, ',', '.') }}</td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td>{{ $item['coa']->kode_akun }} - {{ $item['coa']->nama_akun }}</td>
-                                    <td colspan="6" class="text-center text-muted font-italic">Tidak ada transaksi pada
-                                        periode ini.</td>
-                                </tr>
+                                @if ($saldo_awal == 0)
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted font-italic">
+                                            Tidak ada transaksi atau saldo awal untuk akun ini pada periode ini.
+                                        </td>
+                                    </tr>
+                                @endif
                             @endforelse
 
                             @php
-                                $total_saldo_akhir += $saldo_running; // akumulasi saldo akhir
+                                $total_saldo_akhir += $saldo_running;
                             @endphp
-                        @endforeach
-
-                        {{-- Total keseluruhan debit & kredit --}}
-                        <tr class="bg-light font-weight-bold">
-                            <td colspan="4" class="text-right">Total Keseluruhan</td>
-                            <td class="text-right text-dark">{{ number_format($grand_total_debit, 2, ',', '.') }}</td>
-                            <td class="text-right text-dark">{{ number_format($grand_total_kredit, 2, ',', '.') }}</td>
-                            <td class="text-right text-dark">{{ number_format($total_saldo_akhir, 2, ',', '.') }}</td>
-                        </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted font-italic">
+                                    Tidak ada akun dengan transaksi atau saldo awal pada periode ini.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -157,24 +162,20 @@
 
 @section('css')
     <style>
-        /* Sticky header warna */
         .thead-primary th {
             background-color: #004085 !important;
             color: #fff !important;
         }
 
-        /* Hover effect pada baris transaksi */
         .transaksi-row:hover {
             background-color: #d1ecf1 !important;
             transition: background-color 0.3s ease;
         }
 
-        /* Tooltip styling */
         [data-toggle="tooltip"] {
             cursor: pointer;
         }
 
-        /* Scrollbar styling untuk table responsive */
         .table-responsive::-webkit-scrollbar {
             width: 8px;
             height: 8px;

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Produk;
 use App\Models\KartuStok;
+use App\Models\JurnalUmum;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\MappingJurnal;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
 use App\Models\PenerimaanPembelian;
@@ -114,7 +116,36 @@ class PenerimaanPembelianController extends Controller
                     'qty' => $qty_diterima,
                 ]);
             }
+            // Ambil mapping jurnal untuk penerimaan pembelian
+            $mapping = MappingJurnal::where('modul', 'pembelian')->where('event', 'penerimaan barang')->first();
 
+            if ($mapping) {
+                $total = $harga * $qty_diterima;
+
+                // Jurnal DEBIT ke Persediaan
+                JurnalUmum::create([
+                    'tanggal' => $request->tanggal,
+                    'kode_akun' => $mapping->kode_akun_debit,
+                    'nominal_debit' => $total,
+                    'nominal_kredit' => 0,
+                    'keterangan' => 'Penerimaan dari PO #' . $penerimaan->purchaseOrder->nomor_po,
+                    'ref' => 'goods_receipt',
+                    'ref_id' => $penerimaan->id,
+                    'modul' => 'penerimaan_pembelian',
+                ]);
+
+                // Jurnal KREDIT ke Hutang Dagang
+                JurnalUmum::create([
+                    'tanggal' => $request->tanggal,
+                    'kode_akun' => $mapping->kode_akun_kredit,
+                    'nominal_debit' => 0,
+                    'nominal_kredit' => $total,
+                    'keterangan' => 'Penerimaan dari PO #' . $penerimaan->purchaseOrder->nomor_po,
+                    'ref' => 'goods_receipt',
+                    'ref_id' => $penerimaan->id,
+                    'modul' => 'penerimaan_pembelian',
+                ]);
+            }
             // Update status PO jadi diterima
             PurchaseOrder::where('id', $request->id_po)->update(['status' => 'diterima']);
 

@@ -43,7 +43,7 @@
                             $eventList = [
                                 'Faktur Penjualan',
                                 'Pembayaran Penjualan',
-                                'Purchase Order',
+                                'Penerimaan Barang',
                                 'Faktur Pembelian',
                                 'Pembayaran Pembelian',
                                 'Kas Masuk',

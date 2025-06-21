@@ -154,16 +154,15 @@ Route::prefix('produk-gudang')->name('produk-gudang.')->group(function () {
 });
 
 Route::prefix('mapping_jurnal')->name('mapping_jurnal.')->group(function () {
-    Route::get('/', [MappingJurnalController::class, 'index'])->name('index'); // List semua mapping
-    Route::get('/create', [MappingJurnalController::class, 'create'])->name('create'); // Form tambah
-    Route::post('/', [MappingJurnalController::class, 'store'])->name('store'); // Simpan data baru
-    Route::get('/{id}/edit', [MappingJurnalController::class, 'edit'])->name('edit'); // Form edit
-    Route::put('/{id}', [MappingJurnalController::class, 'update'])->name('update'); // Update data
-    Route::delete('/{id}', [MappingJurnalController::class, 'destroy'])->name('destroy'); // Hapus data
-    Route::get('/{id}', [MappingJurnalController::class, 'show'])->name('show'); // Tampilkan detail (opsional)
-    Route::post('/import', [MappingJurnalController::class, 'import'])->name('import');
     Route::get('/template', [MappingJurnalController::class, 'downloadTemplate'])->name('downloadTemplate');
-    Route::resource('mapping_jurnal', MappingJurnalController::class)->except(['show']);
+    Route::get('/', [MappingJurnalController::class, 'index'])->name('index');
+    Route::get('/create', [MappingJurnalController::class, 'create'])->name('create');
+    Route::post('/', [MappingJurnalController::class, 'store'])->name('store');
+    Route::get('/{id}/edit', [MappingJurnalController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [MappingJurnalController::class, 'update'])->name('update');
+    Route::delete('/{id}', [MappingJurnalController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}', [MappingJurnalController::class, 'show'])->name('show');
+    Route::post('/import', [MappingJurnalController::class, 'import'])->name('import');
 });
 
 Route::get('/sales_order', [SalesOrderController::class, 'index'])->name('sales_order.index');
@@ -283,6 +282,9 @@ Route::get('/laporan/arus-kas/pdf', [LaporanController::class, 'exportPdf'])->na
 Route::get('/laporan/neraca/export', [LaporanController::class, 'exportNeracaExcel'])->name('laporan.neraca.export');
 Route::post('/laporan/neraca/closing', [LaporanController::class, 'closingNeraca'])->name('laporan.neraca.closing');
 Route::get('/laporan/neraca/batal-closing', [LaporanController::class, 'batalClosing'])->name('laporan.neraca.batalClosing');
+Route::get('/laporan/neraca/pdf', [LaporanController::class, 'exportPDF'])->name('laporan.neraca.pdf');
+Route::get('/laporan/semua', [LaporanController::class, 'semua'])->name('laporan.semua');
+
 
 Route::prefix('purchase-order')->name('purchase-order.')->group(function () {
     Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');

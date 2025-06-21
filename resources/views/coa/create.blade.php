@@ -65,9 +65,7 @@
                                 <select class="form-control" id="parent_kode" name="parent_kode">
                                     <option value="">-- Tidak ada --</option>
                                     @foreach ($parents as $kode => $nama)
-                                        @php
-                                            $parentLevel = substr_count($kode, '.');
-                                        @endphp
+                                        @php $parentLevel = substr_count($kode, '.'); @endphp
                                         <option value="{{ $kode }}" data-level="{{ $parentLevel }}"
                                             {{ old('parent_kode') == $kode ? 'selected' : '' }}>
                                             {{ $kode }} - {{ $nama }}
@@ -77,21 +75,32 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="saldo_awal"><i class="fas fa-wallet"></i> Saldo Awal</label>
-                                <input type="number" class="form-control" id="saldo_awal" name="saldo_awal"
-                                    value="{{ old('saldo_awal', 0) }}" required>
+                                <label for="saldo_awal_debit"><i class="fas fa-wallet"></i> Saldo Awal Debit</label>
+                                <input type="number" class="form-control" id="saldo_awal_debit" name="saldo_awal_debit"
+                                    value="{{ old('saldo_awal_debit', 0) }}" step="0.01">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="saldo_awal_kredit"><i class="fas fa-wallet"></i> Saldo Awal Kredit</label>
+                                <input type="number" class="form-control" id="saldo_awal_kredit" name="saldo_awal_kredit"
+                                    value="{{ old('saldo_awal_kredit', 0) }}" step="0.01">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="periode_saldo_awal"><i class="fas fa-calendar-alt"></i> Periode Saldo
+                                    Awal</label>
+                                <input type="month" class="form-control" id="periode_saldo_awal" name="periode_saldo_awal"
+                                    value="{{ old('periode_saldo_awal') }}" required>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save mr-1"></i> Simpan
-                        </button>
-                        <a href="{{ route('coa.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left mr-1"></i> Kembali
-                        </a>
-                    </div>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save mr-1"></i> Simpan
+                            </button>
+                            <a href="{{ route('coa.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left mr-1"></i> Kembali
+                            </a>
+                        </div>
                 </form>
             </div>
         </div>

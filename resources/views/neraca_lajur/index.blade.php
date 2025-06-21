@@ -27,31 +27,35 @@
                 </div>
             </form>
 
-            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                <table class="table table-bordered table-striped table-hover text-nowrap align-middle">
-                    <thead class="thead-dark sticky-top text-center">
-                        <tr>
-                            <th rowspan="2" class="text-nowrap">Kode Akun</th>
-                            <th rowspan="2" class="text-nowrap">Nama Akun</th>
-                            <th colspan="2">Saldo Awal</th>
-                            <th colspan="2">Mutasi</th>
-                            <th colspan="2">Neraca Saldo</th>
-                            <th colspan="2">Penyesuaian</th>
-                            <th colspan="2">Neraca Disesuaikan</th>
-                            <th colspan="2">Laba Rugi</th>
-                            <th colspan="2">Neraca</th>
-                        </tr>
-                        <tr>
-                            @for ($i = 0; $i < 7; $i++)
-                                <th class="text-nowrap">Debet</th>
-                                <th class="text-nowrap">Kredit</th>
-                            @endfor
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            $total = array_fill_keys(
-                                [
+            @if ($data->isEmpty())
+                <div class="alert alert-info">
+                    Tidak ada data transaksi atau saldo awal untuk periode ini.
+                </div>
+            @else
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-bordered table-striped table-hover text-nowrap align-middle">
+                        <thead class="thead-dark sticky-top text-center">
+                            <tr>
+                                <th rowspan="2">Kode Akun</th>
+                                <th rowspan="2">Nama Akun</th>
+                                <th colspan="2">Saldo Awal</th>
+                                <th colspan="2">Mutasi</th>
+                                <th colspan="2">Neraca Saldo</th>
+                                <th colspan="2">Penyesuaian</th>
+                                <th colspan="2">Disesuaikan</th>
+                                <th colspan="2">Laba Rugi</th>
+                                <th colspan="2">Neraca</th>
+                            </tr>
+                            <tr>
+                                @for ($i = 0; $i < 7; $i++)
+                                    <th>Debit</th>
+                                    <th>Kredit</th>
+                                @endfor
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $kolomList = [
                                     'saldo_awal_debit',
                                     'saldo_awal_kredit',
                                     'mutasi_debit',
@@ -66,109 +70,40 @@
                                     'laba_rugi_kredit',
                                     'neraca_debit',
                                     'neraca_kredit',
-                                ],
-                                0,
-                            );
+                                ];
 
-                            $filteredData = $data->filter(function ($akun) {
-                                return collect($akun)
-                                    ->except(['kode_akun', 'nama_akun', 'level'])
-                                    ->map(fn($val) => (float) str_replace(['.', ','], '', $val))
-                                    ->sum() > 0;
-                            });
+                                $total = array_fill_keys($kolomList, 0);
+                            @endphp
 
-                            $currentPage = request()->get('page', 1);
-                            $perPage = 20;
-                            $pagedData = new \Illuminate\Pagination\LengthAwarePaginator(
-                                $filteredData->forPage($currentPage, $perPage),
-                                $filteredData->count(),
-                                $perPage,
-                                $currentPage,
-                                ['path' => request()->url(), 'query' => request()->query()],
-                            );
-                        @endphp
-
-                        @forelse ($pagedData as $akun)
+                            @foreach ($data as $akun)
+                                <tr>
+                                    <td>{{ $akun['kode_akun'] }}</td>
+                                    <td style="padding-left: {{ $akun['level'] * 15 }}px">{{ $akun['nama_akun'] }}</td>
+                                    @foreach ($kolomList as $kolom)
+                                        @php
+                                            $nilai = (float) $akun[$kolom];
+                                            $total[$kolom] += $nilai;
+                                        @endphp
+                                        <td class="text-end">
+                                            {{ $nilai != 0 ? number_format($nilai, 0, ',', '.') : '-' }}
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="table-secondary fw-bold text-end">
                             <tr>
-                                <td class="text-nowrap">{{ $akun['kode_akun'] }}</td>
-                                <td class="text-nowrap" style="padding-left: {{ $akun['level'] * 15 }}px">
-                                    {{ $akun['nama_akun'] }}
-                                </td>
-                                @foreach (['saldo_awal_debit', 'saldo_awal_kredit', 'mutasi_debit', 'mutasi_kredit', 'neraca_saldo_debit', 'neraca_saldo_kredit', 'penyesuaian_debit', 'penyesuaian_kredit', 'neraca_sesudah_debit', 'neraca_sesudah_kredit', 'laba_rugi_debit', 'laba_rugi_kredit', 'neraca_debit', 'neraca_kredit'] as $kolom)
-                                    @php
-                                        $nilai = (float) $akun[$kolom];
-                                        $total[$kolom] += $nilai;
-                                        $tampilkan = in_array($kolom, [
-                                            'saldo_awal_kredit',
-                                            'mutasi_kredit',
-                                            'neraca_saldo_kredit',
-                                            'penyesuaian_kredit',
-                                            'neraca_sesudah_kredit',
-                                            'laba_rugi_kredit',
-                                            'neraca_kredit',
-                                        ])
-                                            ? abs($nilai)
-                                            : $nilai;
-                                    @endphp
-                                    <td class="text-end text-dark text-nowrap">
-                                        {{ number_format($tampilkan, 0, ',', '.') }}
+                                <td colspan="2" class="text-center">TOTAL</td>
+                                @foreach ($kolomList as $kolom)
+                                    <td>
+                                        {{ $total[$kolom] != 0 ? number_format($total[$kolom], 0, ',', '.') : '-' }}
                                     </td>
                                 @endforeach
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="16" class="text-center text-muted">Tidak ada data untuk periode ini.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                    <tfoot class="table-secondary fw-bold text-end">
-                        <tr>
-                            <td colspan="2" class="text-center text-nowrap">TOTAL</td>
-                            @foreach ($total as $kolom => $jumlah)
-                                @php
-                                    $tampilkan = in_array($kolom, [
-                                        'saldo_awal_kredit',
-                                        'mutasi_kredit',
-                                        'neraca_saldo_kredit',
-                                        'penyesuaian_kredit',
-                                        'neraca_sesudah_kredit',
-                                        'laba_rugi_kredit',
-                                        'neraca_kredit',
-                                    ])
-                                        ? abs($jumlah)
-                                        : $jumlah;
-                                @endphp
-                                <td class="text-nowrap">
-                                    {{ number_format($tampilkan, 0, ',', '.') }}
-                                </td>
-                            @endforeach
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <div class="d-flex justify-content-end mt-3">
-                {{ $pagedData->links() }}
-            </div>
+                        </tfoot>
+                    </table>
+                </div>
+            @endif
         </div>
     </div>
-@stop
-
-@section('js')
-    <script>
-        $(function() {
-            $('#tabelNeraca').DataTable({
-                paging: false,
-                scrollX: true,
-                searching: true,
-                ordering: false,
-                info: false,
-                language: {
-                    search: "Cari Akun:",
-                    zeroRecords: "Data tidak ditemukan",
-                    emptyTable: "Tidak ada data ditampilkan"
-                }
-            });
-        });
-    </script>
 @stop

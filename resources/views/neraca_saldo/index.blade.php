@@ -3,7 +3,7 @@
 @section('title', 'Neraca Saldo')
 
 @section('content_header')
-    <h1 class="mb-3">Neraca Saldo</h1>
+    <h1 class="mb-3 font-weight-bold text-primary"><i class="fas fa-balance-scale"></i> Neraca Saldo</h1>
 @stop
 
 @section('content')
@@ -40,7 +40,6 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-filter mr-1"></i> Tampilkan
                     </button>
-
                     <a href="{{ route('neraca.exportExcel', request()->all()) }}" class="btn btn-success">
                         <i class="fas fa-file-excel mr-1"></i> Export Excel
                     </a>
@@ -49,11 +48,11 @@
         </div>
 
         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-            <table class="table table-bordered table-striped table-hover text-nowrap align-middle">
-                <thead class="thead-dark sticky-top text-center">
+            <table class="table table-bordered table-striped table-hover text-nowrap align-middle mb-0">
+                <thead class="thead-dark text-center sticky-top" style="top: 0; z-index: 1020;">
                     <tr>
-                        <th rowspan="2" class="align-middle">Kode Akun</th>
-                        <th rowspan="2" class="align-middle">Nama Akun</th>
+                        <th rowspan="2">Kode Akun</th>
+                        <th rowspan="2">Nama Akun</th>
                         <th colspan="2">Saldo Awal</th>
                         <th colspan="2">Mutasi</th>
                         <th colspan="2">Saldo Akhir</th>
@@ -76,17 +75,22 @@
                         $total_saldo_akhir_debit = 0;
                         $total_saldo_akhir_kredit = 0;
                     @endphp
+                    @php $data_tersedia = false; @endphp
+
                     @foreach ($data_neraca as $akun)
                         @php
-                            $saldo_awal_debit = $akun->saldo_awal > 0 ? $akun->saldo_awal : 0;
-                            $saldo_awal_kredit = $akun->saldo_awal < 0 ? abs($akun->saldo_awal) : 0;
-                            $mutasi_debit = $akun->total_debit;
-                            $mutasi_kredit = $akun->total_kredit;
-                            $saldo_akhir = $akun->saldo_awal + $mutasi_debit - $mutasi_kredit;
+                            $saldo_awal = ($akun->saldo_awal_debit ?? 0) - ($akun->saldo_awal_kredit ?? 0);
+                            $saldo_awal_debit = $saldo_awal > 0 ? $saldo_awal : 0;
+                            $saldo_awal_kredit = $saldo_awal < 0 ? abs($saldo_awal) : 0;
+
+                            $mutasi_debit = $akun->total_debit ?? 0;
+                            $mutasi_kredit = $akun->total_kredit ?? 0;
+
+                            $saldo_akhir = $saldo_awal + $mutasi_debit - $mutasi_kredit;
                             $saldo_akhir_debit = $saldo_akhir > 0 ? $saldo_akhir : 0;
                             $saldo_akhir_kredit = $saldo_akhir < 0 ? abs($saldo_akhir) : 0;
 
-                            // Jangan tampilkan akun yang semuanya nol
+                            // Lewati baris jika tidak ada data
                             if (
                                 $saldo_awal_debit == 0 &&
                                 $saldo_awal_kredit == 0 &&
@@ -96,6 +100,8 @@
                                 continue;
                             }
 
+                            $data_tersedia = true;
+
                             $total_saldo_awal_debit += $saldo_awal_debit;
                             $total_saldo_awal_kredit += $saldo_awal_kredit;
                             $total_mutasi_debit += $mutasi_debit;
@@ -103,27 +109,45 @@
                             $total_saldo_akhir_debit += $saldo_akhir_debit;
                             $total_saldo_akhir_kredit += $saldo_akhir_kredit;
                         @endphp
+
                         <tr>
                             <td>{{ $akun->kode_akun }}</td>
                             <td style="padding-left: {{ ($akun->level - 1) * 20 }}px;">{{ $akun->nama_akun }}</td>
-                            <td class="text-right">{{ number_format($saldo_awal_debit, 2, ',', '.') }}</td>
-                            <td class="text-right">{{ number_format($saldo_awal_kredit, 2, ',', '.') }}</td>
-                            <td class="text-right">{{ number_format($mutasi_debit, 2, ',', '.') }}</td>
-                            <td class="text-right">{{ number_format($mutasi_kredit, 2, ',', '.') }}</td>
-                            <td class="text-right">{{ number_format($saldo_akhir_debit, 2, ',', '.') }}</td>
-                            <td class="text-right">{{ number_format($saldo_akhir_kredit, 2, ',', '.') }}</td>
+                            <td class="text-right">
+                                {{ $saldo_awal_debit > 0 ? number_format($saldo_awal_debit, 2, ',', '.') : '-' }}</td>
+                            <td class="text-right">
+                                {{ $saldo_awal_kredit > 0 ? number_format($saldo_awal_kredit, 2, ',', '.') : '-' }}</td>
+                            <td class="text-right">
+                                {{ $mutasi_debit > 0 ? number_format($mutasi_debit, 2, ',', '.') : '-' }}</td>
+                            <td class="text-right">
+                                {{ $mutasi_kredit > 0 ? number_format($mutasi_kredit, 2, ',', '.') : '-' }}</td>
+                            <td class="text-right">
+                                {{ $saldo_akhir_debit > 0 ? number_format($saldo_akhir_debit, 2, ',', '.') : '-' }}</td>
+                            <td class="text-right">
+                                {{ $saldo_akhir_kredit > 0 ? number_format($saldo_akhir_kredit, 2, ',', '.') : '-' }}</td>
                         </tr>
                     @endforeach
+
+                    @if (!$data_tersedia)
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Tidak ada data transaksi atau saldo awal untuk
+                                periode ini.</td>
+                        </tr>
+                    @endif
                 </tbody>
-                <tfoot class="bg-light font-weight-bold text-right">
+                <tfoot class="bg-light text-right font-weight-bold">
                     <tr>
-                        <td colspan="2" class="text-center">Total</td>
-                        <td>{{ number_format($total_saldo_awal_debit, 2, ',', '.') }}</td>
-                        <td>{{ number_format($total_saldo_awal_kredit, 2, ',', '.') }}</td>
-                        <td>{{ number_format($total_mutasi_debit, 2, ',', '.') }}</td>
-                        <td>{{ number_format($total_mutasi_kredit, 2, ',', '.') }}</td>
-                        <td>{{ number_format($total_saldo_akhir_debit, 2, ',', '.') }}</td>
-                        <td>{{ number_format($total_saldo_akhir_kredit, 2, ',', '.') }}</td>
+                        <td colspan="2" class="text-center">TOTAL</td>
+                        <td>{{ $total_saldo_awal_debit > 0 ? number_format($total_saldo_awal_debit, 2, ',', '.') : '-' }}
+                        </td>
+                        <td>{{ $total_saldo_awal_kredit > 0 ? number_format($total_saldo_awal_kredit, 2, ',', '.') : '-' }}
+                        </td>
+                        <td>{{ $total_mutasi_debit > 0 ? number_format($total_mutasi_debit, 2, ',', '.') : '-' }}</td>
+                        <td>{{ $total_mutasi_kredit > 0 ? number_format($total_mutasi_kredit, 2, ',', '.') : '-' }}</td>
+                        <td>{{ $total_saldo_akhir_debit > 0 ? number_format($total_saldo_akhir_debit, 2, ',', '.') : '-' }}
+                        </td>
+                        <td>{{ $total_saldo_akhir_kredit > 0 ? number_format($total_saldo_akhir_kredit, 2, ',', '.') : '-' }}
+                        </td>
                     </tr>
                 </tfoot>
             </table>

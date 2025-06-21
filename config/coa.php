@@ -9,11 +9,12 @@ return [
         'Kas',
         'Bank',
         'Piutang',
-        'Hutang',
+        'Hutang Jangka Pendek',
+        'Hutang Jangka Panjang',
         'Persediaan',
         'Aset Tetap',
         'HPP',
         'Penyesuaian',
-        'Lainnya'
+        'Lainnya',
     ]
 ];

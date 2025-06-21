@@ -11,7 +11,7 @@ class JurnalUmumController extends Controller
 {
     public function index(Request $request)
     {
-        $query = JurnalUmum::with('coa')->orderBy('tanggal', 'asc'); // ubah desc jadi asc
+        $query = JurnalUmum::with('coa')->orderBy('tanggal', 'asc');
 
         // Filter tanggal
         if ($request->filled('tgl_dari')) {
@@ -21,20 +21,27 @@ class JurnalUmumController extends Controller
             $query->where('tanggal', '<=', $request->tgl_sampai);
         }
 
-        // Search kode akun, keterangan, ref
+        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('kode_akun', 'like', "%$search%")
-                    ->orWhere('keterangan', 'like', "%$search%")
-                    ->orWhere('ref', 'like', "%$search%");
+                $q->where('kode_akun', 'like', "%{$search}%")
+                    ->orWhere('keterangan', 'like', "%{$search}%")
+                    ->orWhere('ref', 'like', "%{$search}%");
             });
         }
 
-        $jurnals = $query->paginate(10);
+        // Simpan clone sebelum pagination untuk hitung total semua data
+        $queryForTotal = clone $query;
 
-        return view('jurnal_umum.index', compact('jurnals'));
+        $jurnals = $query->paginate(10)->withQueryString(); // biar filter tetap
+
+        $totalDebit = $queryForTotal->sum('nominal_debit');
+        $totalKredit = $queryForTotal->sum('nominal_kredit');
+
+        return view('jurnal_umum.index', compact('jurnals', 'totalDebit', 'totalKredit'));
     }
+
     public function create()
     {
         $coa = Coa::orderBy('kode_akun')->get();
